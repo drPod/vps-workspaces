@@ -81,3 +81,9 @@ existing agent continuity and Mac behavior. Report unverified steps explicitly.
 The public repository is the reusable implementation. When present, read
 `~/.local/state/vps-workspaces/OPERATIONS.md` for this machine's private deployment map,
 current workspace ownership, service names and recovery notes. Do not publish that file.
+
+## Optional media
+
+`deploy/media/` contains Compose templates; [docs/MEDIA.md](docs/MEDIA.md) describes setup
+and checks. The private deployment is `~/deploy/media-stack` when present. Keep media
+and credentials outside this checkout. Gluetun owns the VPN firewall; do not handroll one.

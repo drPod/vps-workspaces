@@ -1,0 +1,55 @@
+name: media-stack
+services:
+  radarr:
+    image: lscr.io/linuxserver/radarr@sha256:adb6c09d6b729ea5e642c99cea35af72702ef476bf4763f153299ac5db9f0b4f
+    restart: unless-stopped
+    environment: {PUID: "0", PGID: "0", TZ: Etc/UTC}
+    volumes: ["./config/radarr:/config", "${MEDIA_ROOT:?Set MEDIA_ROOT}:/data"]
+    ports: ["127.0.0.1:17878:7878"]
+    networks: [default, web]
+    mem_limit: 768m
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr@sha256:f2b26429893d4c4cb71941b7ee50b1bdecd9d5f9f9e02d5410615e9f4f7c8d95
+    restart: unless-stopped
+    environment: {PUID: "0", PGID: "0", TZ: Etc/UTC}
+    volumes: ["./config/prowlarr:/config"]
+    ports: ["127.0.0.1:19696:9696"]
+    networks: [default, web]
+    mem_limit: 512m
+  gluetun:
+    image: qmcgaw/gluetun@sha256:5cedd587404f96202060385d541faa4a73e51544ea098ec8d31c614f4d9c6ee0
+    profiles: [vpn]
+    restart: unless-stopped
+    cap_add: [NET_ADMIN]
+    devices: ["/dev/net/tun:/dev/net/tun"]
+    env_file:
+      - path: ./nordvpn.env
+        required: false
+    environment:
+      VPN_SERVICE_PROVIDER: nordvpn
+      VPN_TYPE: openvpn
+      SERVER_COUNTRIES: United States
+      FIREWALL_INPUT_PORTS: "8080"
+    volumes: ["./config/gluetun:/gluetun"]
+    ports: ["127.0.0.1:18080:8080"]
+    networks: [web]
+    mem_limit: 256m
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent@sha256:457e4eec2ee3f5e4ef59f237ad51f6143deba9f7445ab48bb5204a98888ef9aa
+    profiles: [vpn]
+    restart: unless-stopped
+    network_mode: service:gluetun
+    depends_on:
+      gluetun: {condition: service_healthy}
+    environment: {PUID: "0", PGID: "0", TZ: Etc/UTC, WEBUI_PORT: "8080"}
+    volumes: ["./config/qbittorrent:/config", "${MEDIA_ROOT:?Set MEDIA_ROOT}:/data"]
+    mem_limit: 512m
+  media-files:
+    image: caddy@sha256:df7f1c2fb114453b951de51a98efc010db1655a92c2e86be6706714e2417a78d
+    restart: unless-stopped
+    command: [caddy, file-server, --root, /media, --listen, ':8080', --browse]
+    volumes: ["${MEDIA_ROOT:?Set MEDIA_ROOT}/movies:/media:ro"]
+    networks: [web]
+    mem_limit: 128m
+networks:
+  web: {external: true}

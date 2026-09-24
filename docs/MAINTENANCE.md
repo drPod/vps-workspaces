@@ -118,3 +118,8 @@ trusted collaborators, not isolation between untrusted users.
 Follow the [migration and retirement checklist](MIGRATION.md) before cancelling a host.
 It covers state outside the source checkout, final database exports, external routes and
 verification with the old server offline. Keep the actual recovery report private.
+
+## Optional media stack
+
+See [media services](MEDIA.md) for the independent Compose stack, private access, storage,
+VPN verification and playback. Media runtime state belongs outside the synced checkout.
