@@ -78,6 +78,15 @@ tabs in the other group. Saved tab order was retained; report and Post Studio lo
 no page errors. Every HAPI engine kept its pre-deployment PID. Native autosave recovered
 from a verified metadata-only revision conflict and saved the combined browser pane.
 
-The Mac palette configuration validates and is installed. Actual palette click/copy and
-starting the replacement autosave worker need a local cmux shell because SSH descendants
-are denied by the user's existing cmux policy. These checks are not claimed complete.
+The Mac palette configuration validates and is installed. The replacement Mac autosave worker is running and watching the open managed workspaces.
+Actual palette click/copy still needs user confirmation from a local cmux shell because
+SSH descendants are denied by the user's existing cmux policy. That check is not claimed complete.
+
+
+A newly created disposable workspace provisioned its IDE and HAPI session successfully.
+Two independently sized Chromium contexts attached; closing the first and reloading the
+second retained the original engine PID and exactly one terminal tab. The disposable
+workspace was removed and its empty HAPI conversation archived afterward. All six regular
+workspace routes passed anonymous rejection, authenticated IDE/preview access and foreign-
+origin WebSocket rejection. Fresh Mac and VPS snapshots completed; the known unrelated
+corrupt SwarmCI database remains preserved raw with a warning, not reported as verified.

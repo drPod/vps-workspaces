@@ -65,5 +65,5 @@ Existing Mac panes need refreshing; adding the analytics pane requires loading t
 - Preserved backup destinations and extra database roots during installer updates. Added atomic JSON replacement and focused failure regressions.
 - Backed up and deployed the package; updated both backup installations. All six HAPI engine PIDs remained unchanged.
 - Resolved a title-only registry conflict by comparing baseline layout fingerprints, backing up bindings and advancing only metadata. Observed native autosave save the user's two-browser-tab pane automatically.
-- Verified an actual browser session opens the IDE, correct tab groups, report and Post Studio with no page errors. Native palette click/clipboard and replacement Mac autosave worker remain pending the local cmux step.
+- Verified an actual browser session opens the IDE, correct tab groups, report and Post Studio with no page errors. The replacement Mac autosave worker is running and watching all three open managed workspaces. Native palette click/clipboard confirmation remains pending.
 - Added contributor/agent instructions and a private installation runbook outside Git. Mutagen synchronization is documented explicitly; the source and installed app remain separate.

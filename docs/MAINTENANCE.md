@@ -34,6 +34,9 @@ python3 workspace.py autosave-status
 `new` provisions the browser IDE and creates a HAPI-owned Codex conversation. The directory
 must already exist on the VPS. It prints the stable sharing link only after setup succeeds.
 `open` checks the IDE and attaches another native viewer. It does not clone an agent.
+If creation reports a HAPI error after provisioning, the shell workspace remains saved.
+Fix HAPI connectivity, inspect `workspace.py hapi list`, then bind the intended session
+with `workspace.py hapi bind NAME SURFACE SESSION`; do not repeatedly create agents.
 
 Install native palette actions with `python3 workspace.py install cmux` on the Mac:
 

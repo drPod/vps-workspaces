@@ -2,7 +2,9 @@
 
 ## Prerequisites
 
-- macOS with cmux installed at `/Applications/cmux.app` and Python 3.9+.
+- macOS with cmux installed at `/Applications/cmux.app`.
+- [uv](https://docs.astral.sh/uv/getting-started/installation/) on both machines for Python 3.12 and locked dependencies.
+  Existing Mac commands also work with system Python 3.9 because those entry points use the standard library.
 - Linux VPS with SSH keys, Python 3.12, tmux, systemd user services, and a `~/Coding` directory.
 - DNS resolving the workspace domain and its subdomains to the VPS, with ports 80/443 reachable for Caddy's automatic TLS certificates. Explicit hostnames are generated, so a wildcard TLS certificate is not required.
 - Existing rootless Docker Caddy deployment: container `caddy`, `~/deploy/caddy/sites` mounted at `/etc/caddy/sites` and imported by `/etc/caddy/Caddyfile`, `~/deploy/www` mounted at `/srv`. Caddy must run as the same host user through rootless Docker to read the private Unix socket. Adapt these paths in `vps_workspaces/remote.py` and `vps_workspaces/server.py` for other installations.
@@ -14,7 +16,7 @@ The initial adapter intentionally builds on an existing reverse proxy instead of
 Install terminal persistence and Python support:
 
 ```sh
-sudo apt-get install tmux python3-venv
+sudo apt-get install tmux
 mkdir -p ~/.local/share/vps-workspaces/app ~/Coding
 ```
 
@@ -50,7 +52,8 @@ This validates/reloads Caddy after adding explicit workspace and app hostnames. 
 Configure a working SSH alias (`myvps` by default). From a **local** terminal in cmux, in this repository:
 
 ```sh
-python3 workspace.py install cmux
+uv sync --locked
+uv run workspace.py install cmux
 python3 workspace.py open demo
 ```
 
@@ -60,7 +63,8 @@ The new native workspace has the saved panes; start your agent inside its termin
 VWS_SSH_HOST=devbox python3 workspace.py open demo
 ```
 
-After rearranging panes or changing browser URLs:
+The shell integration below saves pane arrangement, tab order, selected tabs and browser
+URLs automatically after a short debounce. Manual save is also available:
 
 ```sh
 python3 workspace.py save demo
@@ -70,7 +74,7 @@ Add terminal panes through `add-terminal` so they get persistent session identit
 
 ## Share
 
-Run `python3 workspace.py link demo` and open the complete HTTPS URL. Anyone with that link joins automatically. The link remains stable across saves. Use **Copy sharing link** in the page to share it again; the address bar no longer contains the access key after joining. Browser pages must allow iframe embedding. An agent started outside the managed tmux session must be stopped/resumed there deliberately.
+Run `python3 workspace.py link demo` and open the complete HTTPS URL. Anyone with that link joins automatically. The link remains stable across saves. Use **VPS Workspaces: Copy Sharing Link** in the IDE command palette to share it again; the address bar no longer contains the access key after joining. Browser pages must allow iframe embedding. An agent started outside the managed tmux session must be stopped/resumed there deliberately.
 
 ## Uninstall
 
