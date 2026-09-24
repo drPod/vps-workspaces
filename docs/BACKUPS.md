@@ -7,13 +7,13 @@ Locations:
 - VPS: `~/.local/share/vps-workspaces-snapshots/` (a convenience symlink to `/var/lib/vps-workspaces-snapshots/` on the larger disk in this deployment)
 - Mac: `~/Backups/vps-workspaces/`
 
-`hourly.0` is newest, `hourly.1` the previous snapshot. Each snapshot has a timestamp in its filesystem metadata. Retention is 24 hourly, 7 daily, 4 weekly and 6 monthly slots; longer-period slots fill as time passes. Daily/weekly/monthly rotations happen when the first successful run in that period occurs.
+`hourly.0` is newest, `hourly.1` the previous snapshot. Each snapshot has a timestamp in its filesystem metadata. Retention is 24 hourly, 7 daily, 4 weekly and 6 monthly slots; longer-period slots fill as time passes. Daily/weekly/monthly rotations happen on the first successful run in that period once the preceding retention tier is populated.
 
 ## Scope and schedule
 
-The VPS runs hourly through `vps-workspaces-backup.timer`. It saves `~/Coding` (including Git repositories), `~/.codex`, workspace/HAPI/IDE state, user systemd configuration, `~/deploy`, and shell/tmux configuration. Reinstallable dependencies, caches, sockets and Codex temporary helper files are excluded. This is a workspace-data backup, not a bootable operating-system image or a logical dump of every external database service.
+The VPS runs hourly through `vps-workspaces-backup.timer`. It saves `~/Coding` (including Git repositories), `~/.codex`, workspace/HAPI/IDE state, user systemd configuration, `~/deploy`, and shell/tmux configuration. Reinstallable dependencies (`node_modules`, `.venv`), build/tool caches (`.next`, `.turbo`, `.cache`, Python analysis caches), sockets and Codex temporary helper files are excluded. This is a workspace-data backup, not a bootable operating-system image or a logical dump of every external database service.
 
-The Mac's hourly LaunchAgent pulls the newest completed VPS snapshot over SSH and also snapshots local `~/Coding`, `~/.codex`, cmux application state, workspace state, `.zshrc` and SSH configuration. It runs when the Mac is awake and can reach the VPS. A shared lock prevents VPS snapshot rotation during the copy. The Mac maintains its own history, so rotating VPS snapshots does not delete the Mac's older retained snapshots.
+The Mac's hourly LaunchAgent pulls the newest completed VPS snapshot over SSH and also snapshots local `~/Coding`, `~/.codex`, cmux application state, workspace/HAPI state, `.zshrc` and SSH configuration. It runs when the Mac is awake and can reach the VPS. A shared lock prevents VPS snapshot rotation during the copy. The Mac maintains its own history, so rotating VPS snapshots does not delete the Mac's older retained snapshots.
 
 SQLite files are copied using SQLite's online backup API before rsnapshot runs. The copies live in `.local/state/vps-workspaces-backup/sqlite/`, with a `manifest.json` mapping each copy to its original path. Consistent copies replace live SQLite files in the backup. If an existing database is corrupt, its raw files are preserved and the manifest/success report explicitly records the warning; this is not a repaired database.
 
@@ -21,7 +21,7 @@ On initial verification, `Coding/gradient-hackathon/data/swarmci.db` already fai
 
 ## Setup and status
 
-Install rsnapshot with your package manager. On this Mac, Homebrew Python 3.14 is used because the system Python SQLite library could not read two newer Codex databases correctly. The installer selects `python3.14` when available. Then:
+Install rsnapshot and GNU rsync with your package manager (`brew install rsnapshot rsync` on Mac). The Mac installer explicitly selects Homebrew rsync: the system openrsync removed sibling backup roots during multi-source verification and is not supported. On this Mac, Homebrew Python 3.14 is used because the system Python SQLite library could not read two newer Codex databases correctly. The installer selects `python3.14` when available. Then:
 
 ```sh
 # VPS, from deployed repository:

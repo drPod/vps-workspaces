@@ -58,7 +58,7 @@ def main():
                             str(Path.home() / '.local/bin/hapi'), 'codex', 'resume', native_id,
                             '--started-by', 'runner', '--permission-mode', a.permission], check=True)
             sid = None
-            for _ in range(100):
+            for _ in range(600):
                 matches = [s for s in api.request('/api/sessions')['sessions'] if (s.get('metadata') or {}).get('codexSessionId') == native_id and s.get('active')]
                 if matches:
                     sid = checked_session(matches[0]['id'])

@@ -26,7 +26,7 @@ def config():
 class Hapi:
     def __init__(self):
         self.config = config()
-        self.base = f'http://127.0.0.1:{self.config["port"]}'
+        self.base = self.config.get('api_url') or f'http://127.0.0.1:{self.config["port"]}'
         self.token = None
         self.token = self.request('/api/auth', {'accessToken': self.config['token']})['token']
 

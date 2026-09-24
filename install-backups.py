@@ -25,13 +25,15 @@ def main():
     stage.mkdir(exist_ok=True)
     rsnapshot = shutil.which('rsnapshot')
     rsync = shutil.which('rsync')
+    if a.role == 'mac':
+        rsync = next((str(p) for p in (Path('/opt/homebrew/bin/rsync'), Path('/usr/local/bin/rsync')) if p.exists()), None)
     if not rsnapshot or not rsync:
-        raise SystemExit('Install rsnapshot and rsync first')
+        raise SystemExit('Install rsnapshot and rsync first (brew install rsnapshot rsync on Mac)')
     conf = root / 'rsnapshot.conf'
     excludes = root / 'exclude.txt'
     config = {'rsnapshot': rsnapshot, 'rsnapshot_config': str(conf), 'snapshot_root': str(snapshots),
               'sqlite_stage': str(stage), 'exclude_file': str(excludes),
-              'excludes': ['node_modules', '.venv', '__pycache__', '.mypy_cache', '.pytest_cache', '.ruff_cache', '*.sock', '.DS_Store', 'Cache', 'CachedData']}
+              'excludes': ['node_modules', '.venv', '__pycache__', '.mypy_cache', '.pytest_cache', '.ruff_cache', '.next', '.turbo', '.cache', '*.sock', '.DS_Store', 'Cache', 'CachedData']}
     rows = [('config_version','1.2'), ('snapshot_root',str(snapshots)+'/'), ('no_create_root','1'),
             ('cmd_rsync',rsync), ('cmd_ssh','/usr/bin/ssh'), ('cmd_rm','/bin/rm'), ('cmd_du','/usr/bin/du'),
             ('retain','hourly\t24'), ('retain','daily\t7'), ('retain','weekly\t4'), ('retain','monthly\t6'),
@@ -53,11 +55,10 @@ def main():
         for source in [home/'.bashrc',home/'.profile',home/'.tmux.conf']:
             if source.exists():rows.append(('backup',str(source)+'\tvps/'))
     else:
-        rows = [(k, v + ' --rsync-path=' + a.remote_home + '/.local/bin/vws-backup-rsync' if k == 'rsync_long_args' else v) for k, v in rows]
         config.update(ssh_host=a.ssh_host, remote_ready=a.remote_home+'/.local/state/vps-workspaces-backup/last-success.json')
         # Pull the newest completed VPS snapshot; Mac rsnapshot keeps its own retention.
-        rows.append(('backup',a.ssh_host+':'+a.remote_home+'/.local/share/vps-workspaces-snapshots/hourly.0/vps/./\tvps/'))
-        roots = [home/'Coding',home/'.codex',home/'.local/state/vps-workspaces',home/'Library/Application Support/cmux']
+        rows.append(('backup',a.ssh_host+':'+a.remote_home+'/.local/share/vps-workspaces-snapshots/hourly.0/vps/./\tvps/\t+rsync_long_args=--rsync-path=' + a.remote_home + '/.local/bin/vws-backup-rsync'))
+        roots = [home/'Coding',home/'.codex',home/'.local/state/vps-workspaces',home/'.local/share/vps-workspaces/hapi',home/'Library/Application Support/cmux']
         config['sqlite_roots'] = [str(p) for p in roots if p.exists()]
         config['excludes'] += [str(home/'.codex/cache'), str(home/'.codex/tmp')]
         for source in roots + [stage]:

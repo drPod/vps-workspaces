@@ -46,3 +46,7 @@ The small adapter uses existing extension source; see NOTICE.md in that director
 ## Revert the web entry
 
 Remove only the workspace's `.ide` marker to return its sharing link to the original web page. Stop its `vps-ide-<name>.service` to release the IDE processes. The tmux agent is independent and continues running.
+
+## Multiple IDEs and file watchers
+
+If opening multiple workbenches for a large `~/Coding` tree reports inotify exhaustion, the verified Linux deployment uses `fs.inotify.max_user_watches=524288` and `fs.inotify.max_user_instances=1024`, persisted in `/etc/sysctl.d/90-vps-workspaces.conf`. Apply these with the system administrator's usual sysctl procedure. The integration does not restart any agent to change these kernel limits.

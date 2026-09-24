@@ -53,4 +53,4 @@ On the installed package with VPS Codex 0.156.1:
 - Actual code-server displayed the Codex conversation and both app/report previews; reload retained three tabs after cleaning up restored preview tabs. Two browser clients, resizing, sharing and unauthenticated rejection passed.
 - Stock upstream full-stack tests are **not** all passing in this environment: Mac primary-exit timeout, Linux per-root shell-identity timeout. These failures are recorded rather than hidden; production validation uses Runner-owned executions and the installed package.
 - Remote cmux browser automation remains denied by cmux's existing relay policy. Ordinary native cmux controls and browser views are unchanged.
-- The original Outreach agent was not automatically stopped or migrated. New HAPI sessions and the integration-check workspace use the new path.
+- The original Outreach conversation was migrated after user authorization. Its native conversation ID and latest history were verified in HAPI; the existing workspace link still opens the IDE and both previews. Reopen the saved native workspace to load its HAPI binding.

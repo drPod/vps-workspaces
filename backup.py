@@ -6,10 +6,11 @@ import json
 import os
 from pathlib import Path
 import sqlite3
+import shlex
 import subprocess
 import time
 
-SKIP_DIRS = {'node_modules', '.git', '.venv', '.mypy_cache', '.pytest_cache', '.ruff_cache', '__pycache__', 'Cache', 'CachedData', 'cache', 'runtime'}
+SKIP_DIRS = {'node_modules', '.git', '.venv', '.mypy_cache', '.pytest_cache', '.ruff_cache', '.next', '.turbo', '.cache', '__pycache__', 'Cache', 'CachedData', 'cache', 'runtime'}
 
 
 def sqlite_copies(roots, stage):
@@ -83,15 +84,16 @@ def main():
         Path(config['exclude_file']).write_text('\n'.join(exclusions) + '\n')
         # Pull only a completed VPS snapshot; its database copies are already consistent.
         if config.get('remote_ready'):
-            subprocess.run(['ssh', '-o', 'BatchMode=yes', config['ssh_host'], 'test -f ' + config['remote_ready']], check=True)
+            subprocess.run(['ssh', '-o', 'BatchMode=yes', config['ssh_host'], 'test -f ' + shlex.quote(config['remote_ready'])], check=True)
         binary = config['rsnapshot']
         command = [binary, '-c', config['rsnapshot_config']]
         subprocess.run(command + ['sync'], check=True)
         rotation_path = state / 'rotation.json'
         rotation = json.loads(rotation_path.read_text()) if rotation_path.exists() else {}
         periods = [('monthly', time.strftime('%Y-%m')), ('weekly', time.strftime('%G-%V')), ('daily', time.strftime('%Y-%m-%d'))]
+        predecessors = {'monthly': 'weekly.3', 'weekly': 'daily.6', 'daily': 'hourly.23'}
         for period, key in periods:
-            if rotation.get(period) != key:
+            if rotation.get(period) != key and (Path(config['snapshot_root']) / predecessors[period]).exists():
                 subprocess.run(command + [period], check=True)
                 rotation[period] = key
         subprocess.run(command + ['hourly'], check=True)
