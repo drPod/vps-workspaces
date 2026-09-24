@@ -27,3 +27,5 @@
 18. Enabled code-server behind the existing passwordless gateway and private Unix socket. Imported Outreach as three VS Code editor groups without restarting its tmux agent. Verified reload, resizing, two viewers, copied links, and unauthenticated rejection. Native cmux access remains available.
 
 19. User identified tmux padding dots in a larger IDE pane. Changed managed windows from smallest-client sizing to latest-active-client sizing. This uses tmux itself; terminal rendering remains VS Code. A shared PTY still has one size at a time.
+
+20. Investigated independent per-viewer Codex rendering through HAPI shared sessions. Inspected its official-TUI attachment and runtime source, confirmed installed Codex remote support, and ran isolated mock-model integration tests. Protocol tests passed and differently sized secondary attachment/detach worked; the full lifecycle test exposed a primary-terminal exit timeout. Recorded findings and migration constraints in [shared-agent research](SHARED-AGENT-RESEARCH.md). Production remains unchanged.

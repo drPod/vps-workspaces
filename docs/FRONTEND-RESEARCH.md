@@ -57,3 +57,7 @@ Evaluate code-server as the first complete replacement candidate. This recommend
 No upstream source was copied and no live service was replaced during this research.
 
 Source heads checked at the end of inspection (moving branches may advance): microsoft/vscode `97452d795c704de960ead42638244f1e104319c7`; jupyterlab/jupyterlab `b524d0acddd7c8320c476d05f7c5e0199c512916`; wavetermdev/waveterm `a4447c1563b2df285ab89e76c82f91e1a1a49c1e`.
+
+## Follow-up: independent agent views
+
+The code-server integration is now deployed; see [IDE setup](IDE.md). For independent terminal dimensions while sharing one Codex engine, see [shared-agent research](SHARED-AGENT-RESEARCH.md), including HAPI source inspection and isolated test results.
