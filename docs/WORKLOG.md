@@ -19,3 +19,5 @@
 
 13. Changed Add Terminal to reserve the tmux identity first, then publish the actual native layout only after pane creation. Added failure/retry tests and Caddy rollback coverage.
 14. Confirmed that Session Deck contributes no source or frontend dependency; retain its link only as research provenance. Live passwordless sharing passed in two isolated Chromium browser contexts.
+
+15. Compared complete frontend applications after feedback on the custom web page. Recorded source-level findings for code-server/VS Code, JupyterLab, Wave Terminal, and the archived Cloud9 SDK in FRONTEND-RESEARCH.md. Recommended evaluating code-server as a complete application; no replacement has been deployed.
