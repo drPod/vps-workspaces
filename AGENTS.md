@@ -88,3 +88,10 @@ The media stack and invitation launcher moved to [drPod/watch-link](https://gith
 Read that repository's AGENTS.md for media work. [docs/MEDIA.md](docs/MEDIA.md) keeps the handoff
 and backup relationship. The private deployment remains `~/deploy/media-stack`; credentials
 and media stay outside either checkout. Gluetun owns the VPN firewall.
+
+## Heavy jobs
+
+Read [docs/RESOURCE-LIMITS.md](docs/RESOURCE-LIMITS.md). Launch memory/CPU-heavy host helpers
+in a separate systemd unit under `agent-jobs.slice` with a per-job memory cap; do not run them
+unbounded inside HAPI. Docker daemon/container work requires its own limits. Keep the interactive
+agent and SSH outside the job slice. Do not assume these limits catch arbitrary shell commands.
