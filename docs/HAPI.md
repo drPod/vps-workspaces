@@ -16,7 +16,7 @@ The upstream HAPI 0.30.7 application is installed separately, without copying it
 On the existing supported Linux amd64 VPS deployment:
 
 ```sh
-python3 install-hapi.py --host hapi.example.com
+python3 workspace.py install hapi --host hapi.example.com
 ```
 
 This installs the pinned official npm package and configures `hapi-hub.service`, `hapi-runner.service`, `hapi-proxy.socket` and a separate Caddy route. Secrets remain under `~/.local/share/vps-workspaces/hapi/`, with private permissions. No relay provider or Telegram account is required. Runner browsing/spawning is restricted to `~/Coding`.
@@ -26,10 +26,10 @@ This installs the pinned official npm package and configures `hapi-hub.service`,
 Run these on the VPS, using IDs from your saved workspace and HAPI:
 
 ```sh
-python3 ~/.local/share/vps-workspaces/app/hapi-workspace.py list
-python3 ~/.local/share/vps-workspaces/app/hapi-workspace.py bind demo agent HAPI_SESSION_ID
+python3 ~/.local/share/vps-workspaces/app/workspace.py hapi list
+python3 ~/.local/share/vps-workspaces/app/workspace.py hapi bind demo agent HAPI_SESSION_ID
 # Or create a new Runner-owned Codex session for an idle saved terminal:
-python3 ~/.local/share/vps-workspaces/app/hapi-workspace.py new demo agent
+python3 ~/.local/share/vps-workspaces/app/workspace.py hapi new demo agent
 ```
 
 Then reopen the saved workspace on the Mac or reload code-server. Binding refuses to replace a terminal with a running program. The registry revision changes, so an older native workspace's autosave will pause if it attempts to overwrite the new binding.
@@ -39,7 +39,7 @@ Then reopen the saved workspace on the Mac or reload code-server. Binding refuse
 HAPI cannot hot-migrate a legacy Codex process. Exit the old agent normally first. From a separate VPS shell (or through SSH from the Mac), run:
 
 ```sh
-python3 ~/.local/share/vps-workspaces/app/hapi-workspace.py migrate demo agent NATIVE_CODEX_THREAD_ID
+python3 ~/.local/share/vps-workspaces/app/workspace.py hapi migrate demo agent NATIVE_CODEX_THREAD_ID
 ```
 
 The importer starts the ordinary upstream HAPI wrapper in a systemd-owned execution and records the HAPI session ID after it becomes active. Subsequent cold resumes use HAPI's Runner. It does not kill the original agent. The default permission is `default`; use `--permission read-only` or `--permission yolo` only when desired. HAPI rejects some native profile/worktree flags and concurrent rewind; see its [shared-session boundaries](https://hapi.run/docs/guide/codex-shared-sessions).

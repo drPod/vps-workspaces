@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 
-export type GalleryTerminal = vscode.TerminalOptions & {
+export type GalleryTerminal = Omit<vscode.TerminalOptions, "color"> & {
   name?: string;
   command?: string;
   color?: string;

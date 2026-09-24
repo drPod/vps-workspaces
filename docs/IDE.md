@@ -22,7 +22,7 @@ First install the base gateway and save a workspace as described in INSTALL.md. 
 mkdir -p ~/.local/lib
 curl -fL https://github.com/coder/code-server/releases/download/v4.138.0/code-server-4.138.0-linux-amd64.tar.gz -o /tmp/code-server.tar.gz
 tar -xzf /tmp/code-server.tar.gz -C ~/.local/lib
-python3 ~/.local/share/vps-workspaces/app/install-ide.py demo
+python3 ~/.local/share/vps-workspaces/app/workspace.py install ide demo
 systemctl --user restart vps-workspaces.service
 ```
 
@@ -43,9 +43,11 @@ npm run build
 
 The small adapter uses existing extension source; see NOTICE.md in that directory. The remaining custom integration is saved-layout translation, stable tmux identities, and sharing-link access. No separate frontend framework is introduced.
 
-## Revert the web entry
+## Disable a browser IDE
 
-Remove only the workspace's `.ide` marker to return its sharing link to the original web page. Stop its `vps-ide-<name>.service` to release the IDE processes. The tmux agent is independent and continues running.
+Stop its `vps-ide-<name>.service` and remove its `.ide` marker to disable browser access.
+The retired custom frontend is not a fallback. Reopening a managed workspace provisions the
+IDE again. HAPI agents and ordinary tmux sessions remain independent of the browser IDE.
 
 ## Multiple IDEs and file watchers
 

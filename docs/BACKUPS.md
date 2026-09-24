@@ -25,9 +25,9 @@ Install rsnapshot and GNU rsync with your package manager (`brew install rsnapsh
 
 ```sh
 # VPS, from deployed repository:
-python3 install-backups.py vps
+python3 workspace.py install backups vps
 # Mac, from local repository:
-python3 install-backups.py mac --ssh-host myvps --remote-home /home/ubuntu
+python3 workspace.py install backups mac --ssh-host myvps --remote-home /home/ubuntu
 ```
 
 Configuration, logs, database staging and `last-success.json` are under `~/.local/state/vps-workspaces-backup/` on each machine. A failed run leaves older snapshots intact and does not publish a new success marker. The stored files retain private account permissions; there is no backup password.

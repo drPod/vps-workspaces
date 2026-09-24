@@ -31,10 +31,19 @@
     ]
   },
   "scripts": {
-    "build": "esbuild extension.ts --bundle --platform=node --external:vscode --outfile=dist/extension.js",
-    "test": "node --test layout.test.cjs"
+    "build": "esbuild extension.ts --bundle --platform=node --external:vscode --minify --legal-comments=eof --outfile=dist/extension.js",
+    "test": "npm run check && npm run build && esbuild layout.ts --bundle --platform=node --outfile=.test-build/layout.cjs && node --test layout.test.cjs",
+    "check": "tsc && prettier --check extension.ts layout.ts layout.test.cjs tsconfig.json package.json",
+    "format": "prettier --write extension.ts layout.ts layout.test.cjs tsconfig.json package.json"
   },
   "devDependencies": {
-    "esbuild": "0.25.10"
+    "@types/node": "^22.20.4",
+    "@types/vscode": "1.95",
+    "esbuild": "0.25.10",
+    "prettier": "3.9.9",
+    "typescript": "^7.0.2"
+  },
+  "dependencies": {
+    "zod": "^4.6.5"
   }
 }

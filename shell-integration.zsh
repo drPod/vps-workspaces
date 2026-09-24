@@ -5,9 +5,9 @@ _vws_autosave_start() {
     return
   fi
   local vws_root="${VWS_LOCAL_ROOT:-$HOME/Coding/vps-workspaces}"
-  [[ -f "$vws_root/autosave.py" ]] || return
+  [[ -f "$vws_root/workspace.py" ]] || return
   mkdir -p "$HOME/.local/state/vps-workspaces"
-  (umask 077; exec python3 "$vws_root/autosave.py") >> "$HOME/.local/state/vps-workspaces/autosave.log" 2>&1 &!
+  (umask 077; exec python3 "$vws_root/workspace.py" autosave) >> "$HOME/.local/state/vps-workspaces/autosave.log" 2>&1 &!
   _VWS_AUTOSAVE_PID=$!
 }
 autoload -Uz add-zsh-hook

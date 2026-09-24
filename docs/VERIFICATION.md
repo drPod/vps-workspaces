@@ -37,7 +37,7 @@
 python3 -m unittest discover -s tests -v
 ```
 
-Run `verify-native.py` in a local cmux terminal after opening the initial Outreach workspace. It performs Save/Open and checks topology and URLs without closing existing workspaces. Private results are written outside the repository.
+Run `workspace.py verify-native` in a local cmux terminal after opening the initial Outreach workspace. It performs Save/Open and checks topology and URLs without closing existing workspaces. Private results are written outside the repository.
 
 ## code-server integration verification
 
@@ -65,3 +65,19 @@ Not yet exercised: IDE file-editing collaboration/conflict handling, arbitrary t
 - Retired terminal route returns 404; `/classic/` redirects to the IDE. Layout-only saves skip unchanged Caddy routes.
 - New `codex` sessions launched through fresh Mac zsh and VPS bash registered in HAPI. Native prompts received the expected replies, and both saved transcripts were inspected in Chromium. Both terminals exited normally; the Mac session cold-resumed through its Runner with the same native identity. Disposable verification sessions were archived afterward.
 - This does not provide native database merging, automatic migration of a running agent, or automatic HAPI adoption of desktop-app/script/bypassed sessions.
+
+
+## Package refactor verification (24 September 2026)
+
+31 Python tests, strict mypy, the shared Ruff lint/format rules, six extension tests and
+TypeScript checks passed. uv's locked environment was installed on Linux and macOS;
+both uv and the dependency-free system-Python CLI help ran on the Mac.
+
+Real Chromium opened the existing shared workspace with one terminal group and two browser
+tabs in the other group. Saved tab order was retained; report and Post Studio loaded with
+no page errors. Every HAPI engine kept its pre-deployment PID. Native autosave recovered
+from a verified metadata-only revision conflict and saved the combined browser pane.
+
+The Mac palette configuration validates and is installed. Actual palette click/copy and
+starting the replacement autosave worker need a local cmux shell because SSH descendants
+are denied by the user's existing cmux policy. These checks are not claimed complete.

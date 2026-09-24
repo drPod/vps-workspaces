@@ -4,10 +4,12 @@ import tempfile
 import time
 import unittest
 from unittest.mock import patch
+
 from aiohttp.test_utils import TestClient, TestServer
-import server
-from model import validate
-from sharing import share_key
+
+from vps_workspaces import server
+from vps_workspaces.model import validate
+from vps_workspaces.sharing import share_key
 
 
 class AccessTests(unittest.IsolatedAsyncioTestCase):
@@ -18,13 +20,7 @@ class AccessTests(unittest.IsolatedAsyncioTestCase):
             "id": "demo",
             "name": "Demo",
             "host": "demo.example.test",
-            "layout": {
-                "pane": {
-                    "surfaces": [
-                        {"id": "shell", "type": "terminal", "session": "demo-shell"}
-                    ]
-                }
-            },
+            "layout": {"pane": {"surfaces": [{"id": "shell", "type": "terminal", "session": "demo-shell"}]}},
         }
         (self.root / "demo.json").write_text(json.dumps(self.doc))
         self.access = {"key": "test-only-secret"}
@@ -52,9 +48,7 @@ class AccessTests(unittest.IsolatedAsyncioTestCase):
             "/ide/",
             "/ide/stable-example",
         ):
-            r = await self.client.get(
-                path, headers={"Host": "demo.example.test"}, allow_redirects=False
-            )
+            r = await self.client.get(path, headers={"Host": "demo.example.test"}, allow_redirects=False)
             self.assertEqual(r.status, 401)
 
     async def test_valid_cookie_can_read_only_its_workspace(self):
@@ -66,9 +60,7 @@ class AccessTests(unittest.IsolatedAsyncioTestCase):
             self.headers(expiry=int(time.time()) - 1),
             {"Host": "demo.example.test", "Cookie": "vws_access=demo:9999999999:fake"},
         ):
-            r = await self.client.get(
-                "/workspace.json", headers=h, allow_redirects=False
-            )
+            r = await self.client.get("/workspace.json", headers=h, allow_redirects=False)
             self.assertEqual(r.status, 401)
 
     async def test_link_join_requires_same_origin_and_sets_secure_cookie(self):
@@ -137,9 +129,7 @@ class AccessTests(unittest.IsolatedAsyncioTestCase):
             "/auth", headers=dict(self.headers(), **{"X-Forwarded-Uri": "/ide/"}), allow_redirects=False
         )
         self.assertEqual(r.status, 302)
-        self.assertEqual(
-            r.headers["Location"], "/ide/?workspace=/private/demo.code-workspace"
-        )
+        self.assertEqual(r.headers["Location"], "/ide/?workspace=/private/demo.code-workspace")
 
     async def test_cross_origin_websocket_is_rejected(self):
         headers = dict(self.headers(), **{"X-VWS-Upgrade": "websocket", "Origin": "https://evil.test"})
@@ -147,15 +137,18 @@ class AccessTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(r.status, 403)
 
     async def test_preview_auth_is_scoped_and_accepts_same_origin_websocket(self):
-        self.doc['layout']['pane']['surfaces'].append({'id': 'preview', 'type': 'browser', 'url': 'http://localhost:8765/'})
-        (self.root / 'demo.json').write_text(json.dumps(self.doc))
-        from model import browser_host
-        host = browser_host(self.doc, self.doc['layout']['pane']['surfaces'][1])
-        headers = dict(self.headers(), Host=host, Origin='https://' + host)
-        headers['X-VWS-Upgrade'] = 'websocket'
-        self.assertEqual((await self.client.get('/auth', headers=headers)).status, 204)
-        headers['Cookie'] = self.headers('other')['Cookie']
-        self.assertEqual((await self.client.get('/auth', headers=headers)).status, 401)
+        self.doc["layout"]["pane"]["surfaces"].append(
+            {"id": "preview", "type": "browser", "url": "http://localhost:8765/"}
+        )
+        (self.root / "demo.json").write_text(json.dumps(self.doc))
+        from vps_workspaces.model import browser_host
+
+        host = browser_host(self.doc, self.doc["layout"]["pane"]["surfaces"][1])
+        headers = dict(self.headers(), Host=host, Origin="https://" + host)
+        headers["X-VWS-Upgrade"] = "websocket"
+        self.assertEqual((await self.client.get("/auth", headers=headers)).status, 204)
+        headers["Cookie"] = self.headers("other")["Cookie"]
+        self.assertEqual((await self.client.get("/auth", headers=headers)).status, 401)
 
 
 class ValidationTests(unittest.TestCase):
@@ -189,13 +182,7 @@ class ValidationTests(unittest.TestCase):
                     {
                         "id": "demo",
                         "name": "Demo",
-                        "layout": {
-                            "pane": {
-                                "surfaces": [
-                                    {"id": "browser", "type": "browser", "url": url}
-                                ]
-                            }
-                        },
+                        "layout": {"pane": {"surfaces": [{"id": "browser", "type": "browser", "url": url}]}},
                     }
                 )
 

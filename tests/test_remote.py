@@ -5,8 +5,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-import remote
-import workspace
+from vps_workspaces import remote, workspace
 
 
 class RegistryTests(unittest.TestCase):
@@ -29,19 +28,12 @@ class RegistryTests(unittest.TestCase):
         from types import SimpleNamespace
 
         with (
-            patch.object(
-                remote.subprocess, "run", return_value=SimpleNamespace(returncode=0)
-            ),
+            patch.object(remote.subprocess, "run", return_value=SimpleNamespace(returncode=0)),
             patch.object(remote, "run") as run,
         ):
             remote.ensure("demo-agent")
         run.assert_called_once_with(
-            *remote.TMUX,
-            "set-window-option",
-            "-t",
-            "demo-agent",
-            "window-size",
-            "latest",
+            [*remote.TMUX, "set-window-option", "-t", "demo-agent", "window-size", "latest"],
         )
 
     def test_prepare_is_unpublished_and_retryable(self):
@@ -63,10 +55,10 @@ class RegistryTests(unittest.TestCase):
         with (
             patch.object(pathlib.Path, "home", return_value=self.root),
             patch.object(remote, "run", side_effect=RuntimeError("reload failed")),
-            patch("caddy_routes.prepare_previews"),
+            patch("vps_workspaces.caddy_routes.prepare_previews"),
+            self.assertRaises(RuntimeError),
         ):
-            with self.assertRaises(RuntimeError):
-                remote.save(copy.deepcopy(self.doc))
+            remote.save(copy.deepcopy(self.doc))
         self.assertEqual(remote.load("demo"), self.doc)
         self.assertEqual(self.site.read_text(), "original route")
 
@@ -75,19 +67,13 @@ class RegistryTests(unittest.TestCase):
         (self.root / "demo.json").write_text(json.dumps(state))
         with (
             patch.object(workspace, "STATE", self.root),
-            patch.object(
-                workspace, "remote", side_effect=[self.doc, {"id": "review"}]
-            ) as rpc,
+            patch.object(workspace, "remote", side_effect=[self.doc, {"id": "review"}]) as rpc,
             patch.object(workspace, "attach_command", return_value="attach"),
-            patch.object(
-                workspace, "cmux", side_effect=RuntimeError("creation failed")
-            ),
+            patch.object(workspace, "cmux", side_effect=RuntimeError("creation failed")),
             patch.object(workspace, "save_workspace") as save,
         ):
             with self.assertRaises(RuntimeError):
                 workspace.add_terminal("demo", "review")
             save.assert_not_called()
-            self.assertEqual(
-                [c.args[0] for c in rpc.call_args_list], ["get", "prepare-terminal"]
-            )
+            self.assertEqual([c.args[0] for c in rpc.call_args_list], ["get", "prepare-terminal"])
         self.assertEqual(json.loads((self.root / "demo.json").read_text()), state)

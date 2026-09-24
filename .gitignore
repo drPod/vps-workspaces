@@ -13,3 +13,6 @@ artifacts/
 .ruff_cache/
 
 node_modules/
+
+.mypy_cache/
+ide-extension/.test-build/

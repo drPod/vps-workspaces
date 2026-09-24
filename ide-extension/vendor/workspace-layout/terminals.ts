@@ -4,18 +4,14 @@ import { GalleryTerminal, GalleryTerminalGroup } from "./types";
 
 const COLOR_PREFIX = "terminal.ansi";
 
-function prepareTerminal(config: GalleryTerminal) {
-  if (config.color && !config.color.startsWith(COLOR_PREFIX)) {
-    const color = config.color.charAt(0).toUpperCase() + config.color.slice(1);
-    const themeColor = `${COLOR_PREFIX}${color}`;
-
-    // @ts-ignore
-    config.color = new vscode.ThemeColor(themeColor);
-  }
-
-  if (config.icon) {
-    config.iconPath = new vscode.ThemeIcon(config.icon);
-  }
+function prepareTerminal(config: GalleryTerminal): vscode.TerminalOptions {
+  const {color, icon, ...options} = config;
+  return {
+    ...options,
+    color: color ? new vscode.ThemeColor(color.startsWith(COLOR_PREFIX)
+      ? color : `${COLOR_PREFIX}${color.charAt(0).toUpperCase()}${color.slice(1)}`) : undefined,
+    iconPath: icon ? new vscode.ThemeIcon(icon) : options.iconPath,
+  };
 }
 
 function initializeTerminal(
@@ -28,11 +24,10 @@ function initializeTerminal(
 }
 
 async function createTerminal(config: GalleryTerminal) {
-  prepareTerminal(config);
 
   const existing = vscode.window.terminals.find(t => t.name === config.name);
   if (existing) return existing;
-  const terminal = vscode.window.createTerminal(config);
+  const terminal = vscode.window.createTerminal(prepareTerminal(config));
   initializeTerminal(terminal, config);
 
   return terminal;

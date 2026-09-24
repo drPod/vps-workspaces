@@ -1,0 +1,13 @@
+[Unit]
+Description=code-server for ${name}
+After=network.target
+
+[Service]
+Environment=VWS_WORKSPACE=${name}
+UMask=0077
+ExecStart=${binary} --auth none --socket ${home}/deploy/www/vws-ide-${name}.sock --socket-mode 600 --user-data-dir ${ide}/data --extensions-dir ${extensions} --reconnection-grace-time 60 --disable-telemetry --disable-update-check --disable-workspace-trust --disable-proxy ${workspace}
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=default.target

@@ -47,3 +47,25 @@ The audit is complete for the current implementation. This is not a claim that n
 - [HAPI installation](https://hapi.run/docs/guide/installation): supported package installation and CLI/Hub/Runner roles.
 - [HAPI shared Codex sessions](https://hapi.run/docs/guide/codex-shared-sessions): ownership, resume, remote access and unsupported features.
 - [Existing source attribution](UPSTREAM.md) and [extension notice](../ide-extension/NOTICE.md): exact upstream code reuse versus inspiration.
+
+## September 24 refactor
+
+The integration now lives in `vps_workspaces/`, behind `workspace.py` and the stable SSH
+`remote.py` entry point. Shared JSON writes and registry access have single implementations.
+Python annotations and TypeScript checks run in CI; Zod validates extension input.
+
+cmux actions use its native configuration schema and new-tab command target. Its standalone
+settings editor preserves JSONC; the vendored compatibility change detects whether the
+installed validator accepts `--scope`. No replacement configuration parser was written.
+The Python SDK in cmux-tui was inspected, but its prefixed resource IDs/protocol are not a
+verified replacement for the installed macOS control CLI. This adapter keeps the official CLI.
+
+Clipboard requests use macOS `pbcopy` or the terminal's native OSC 52 support. There is no
+clipboard daemon, tunnel, Clipaste dependency or custom clipboard synchronization service.
+
+
+Development now follows the early Orchard/Sixtyfive pattern: uv owns the project environment
+and lockfile; concise typed modules use the standard library and upstream libraries directly.
+The Ruff rule set matches Sixtyfive's current E3/B/I/C4/PIE/PERF/DTZ/FAST extensions and
+spacing exceptions. Vendor directories retain their upstream style and license notices.
+See https://docs.astral.sh/uv/guides/projects/ for the dependency/lockfile workflow.

@@ -1,0 +1,31 @@
+[project]
+name = "vps-workspaces"
+version = "0.1.0"
+description = "Shared cmux workspaces using HAPI and code-server"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = ["aiohttp==3.13.5"]
+
+[tool.uv]
+package = false
+
+[dependency-groups]
+dev = ["mypy==2.3.1", "ruff==0.16.8"]
+
+[tool.ruff]
+line-length = 120
+extend-exclude = ["ide-extension", "vendor"]
+
+[tool.ruff.lint]
+preview = true
+explicit-preview-rules = true
+extend-select = ["E3", "B", "I", "C4", "PIE", "PERF", "DTZ", "FAST"]
+ignore = ["E301", "E302", "E303", "E305", "E402"]
+
+[tool.mypy]
+python_version = "3.12"
+files = ["vps_workspaces", "workspace.py", "remote.py"]
+check_untyped_defs = true
+disallow_untyped_defs = true
+warn_unused_ignores = true
+no_implicit_optional = true

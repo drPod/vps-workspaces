@@ -8,13 +8,17 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: pip install -r requirements.txt
-      - run: python -m unittest discover -s tests -v
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync --locked
+      - run: uv run mypy
+      - run: uv run ruff check
+      - run: uv run ruff format --check
+      - run: uv run python -m unittest discover -s tests -v
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
       - run: npm ci --ignore-scripts
         working-directory: ide-extension
-      - run: npm test && npm run build
+      - run: npm test
         working-directory: ide-extension
       - run: git diff --exit-code -- ide-extension/dist

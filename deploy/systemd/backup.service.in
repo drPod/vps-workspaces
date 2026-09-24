@@ -1,0 +1,9 @@
+[Unit]
+Description=Unencrypted workspace snapshots via rsnapshot
+
+[Service]
+Type=oneshot
+UMask=0077
+ExecStart=/usr/bin/python3 ${script} backup --config ${config}
+Nice=10
+IOSchedulingClass=idle

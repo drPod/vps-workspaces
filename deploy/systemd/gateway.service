@@ -1,0 +1,13 @@
+[Unit]
+Description=VPS workspace sharing-link authentication
+After=network.target
+
+[Service]
+ExecStart=%h/.local/share/vps-workspaces/venv/bin/python %h/.local/share/vps-workspaces/app/workspace.py serve
+WorkingDirectory=%h/.local/share/vps-workspaces/app
+Restart=on-failure
+RestartSec=3
+UMask=0077
+
+[Install]
+WantedBy=default.target

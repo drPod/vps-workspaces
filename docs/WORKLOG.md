@@ -41,3 +41,29 @@
 
 28. Completed the reuse audit follow-up: replaced aiohttp transport with Caddy reverse_proxy/forward_auth, used standard systemd socket proxies for host-loopback previews, and deleted the classic frontend/ttyd manager. Verified live auth boundaries, credential stripping, previews, code-server WebSockets, reload and two viewers.
 29. Configured fresh interactive Mac/VPS shells to delegate coding sessions to upstream HAPI, keeping native management commands available. Verified both machines' real prompts/replies in the shared app, normal exit and Mac cold resume. Documented that shared app access does not merge native databases or move execution between machines.
+
+
+### 2026-09-24 — Correct migrated preview ownership
+
+Outreach's port 8765 incorrectly served the sixtyfive Hex founder dashboard. Conversation provenance placed the dashboard with the product-analytics work. Among the open workspaces, Autumn user tiers is the closest match for product analytics and Hex work.
+
+- Moved `preview-sixtyfive-hex.service` to loopback port 8787 using its existing `HEX_APP_PORT` option.
+- Enabled stock Python HTTP serving of `ss-outreach/post-studio` on loopback port 8765 through `post-studio.service`.
+- Corrected Outreach's saved preview title and added the founder dashboard to Autumn user tiers. Updated the integration fixture's analytics URL.
+- Backed up affected workspace records and the original analytics unit before changing routing.
+- Verified both applications respond and the authenticated public Outreach preview serves Post Studio.
+
+Existing Mac panes need refreshing; adding the analytics pane requires loading the updated saved layout. VPS-to-Mac SSH is currently unavailable. Post Studio drafts remain in each browser's storage; serving the app on the VPS does not migrate browser drafts.
+
+### 2026-09-24 — Typed package, upstream actions and deployment
+
+- Organized the Python integration into a typed package with stable workspace.py/remote.py entry points, service templates and a documented code map.
+- Adopted uv project dependencies and uv.lock; matched Sixtyfive's 120-column Ruff rules and checked every owned Python file, including tests.
+- Used the upstream standalone cmux JSONC settings editor for native New VPS Workspace and Copy Workspace Link actions. Kept its license and documented the installed-version compatibility patch.
+- Added Zod validation and strict TypeScript checks; retained attributed Simple Browser and Workspace Layout code.
+- Fixed selected-tab restoration without reordering browser tabs, stale PID reuse during viewer cleanup, and IDE readiness checks against actual socket connections.
+- Preserved backup destinations and extra database roots during installer updates. Added atomic JSON replacement and focused failure regressions.
+- Backed up and deployed the package; updated both backup installations. All six HAPI engine PIDs remained unchanged.
+- Resolved a title-only registry conflict by comparing baseline layout fingerprints, backing up bindings and advancing only metadata. Observed native autosave save the user's two-browser-tab pane automatically.
+- Verified an actual browser session opens the IDE, correct tab groups, report and Post Studio with no page errors. Native palette click/clipboard and replacement Mac autosave worker remain pending the local cmux step.
+- Added contributor/agent instructions and a private installation runbook outside Git. Mutagen synchronization is documented explicitly; the source and installed app remain separate.

@@ -4,8 +4,10 @@ The application UI is code-server / VS Code. This extension only translates save
 
 Source: https://github.com/microsoft/vscode/tree/97452d795c704de960ead42638244f1e104319c7/extensions/simple-browser
 
-`vendor/workspace-layout/` is adapted from Jonathan Carter's MIT-licensed Workspace Layout extension, commit 5ea20e7cd19e57bb000ceaf80237d63ac7b6034a. Changes: preserve existing terminals, reuse matching named instances, and preserve focus. The cmux tree conversion and reading the VPS registry are project-specific integration.
+`vendor/workspace-layout/` is adapted from Jonathan Carter's MIT-licensed Workspace Layout extension, commit 5ea20e7cd19e57bb000ceaf80237d63ac7b6034a. Changes: preserve existing terminals, reuse matching named instances, preserve focus, and construct typed terminal options without mutating color values. The cmux tree conversion and reading the VPS registry are project-specific integration.
 
 https://github.com/lostintangent/workspace-layout/tree/5ea20e7cd19e57bb000ceaf80237d63ac7b6034a
 
 Adapter lifecycle handling records the tmux client PID returned by VS Code and detaches only that viewer's client on extension-host deactivation. This does not terminate or recreate tmux sessions.
+
+Zod (MIT) validates saved workspace data at the extension boundary. Its bundled runtime license is in `vendor/zod/LICENSE`. Source: https://github.com/colinhacks/zod
