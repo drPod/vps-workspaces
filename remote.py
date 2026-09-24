@@ -50,34 +50,26 @@ def save(doc):
     )
     doc["revision"] = (old or {}).get("revision", 0) + 1
     doc["saved_at"] = int(time.time())
-    hosts = []
+    documents = []
     for p in ROOT.glob("*.json"):
         if p.name in ("access.json", "settings.json"):
             continue
         d = doc if p == path else json.loads(p.read_text())
-        if "layout" not in d:
-            continue
-        hosts.append(d["host"])
-        hosts.extend(
-            browser_host(d, s)
-            for s in surfaces(d["layout"])
-            if s["type"] == "browser" and local_browser(s)
-        )
+        if "layout" in d:
+            documents.append(d)
     if not path.exists():
-        hosts.append(doc["host"])
-        hosts.extend(
-            browser_host(doc, s)
-            for s in surfaces(doc["layout"])
-            if s["type"] == "browser" and local_browser(s)
-        )
+        documents.append(doc)
+    from caddy_routes import render, prepare_previews
     site = pathlib.Path.home() / "deploy/caddy/sites/vps-workspaces.caddy"
     previous = site.read_text() if site.exists() else None
+    rendered = render(documents)
+    if rendered == previous:
+        atomic(path, doc)
+        return doc
+    prepare_previews(documents)
     atomic(path, doc)
     try:
-        site.write_text(
-            ", ".join(sorted(set(hosts)))
-            + " {\n reverse_proxy unix//srv/vps-workspaces.sock\n}\n"
-        )
+        site.write_text(rendered)
         run(
             "docker",
             "exec",

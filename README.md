@@ -23,7 +23,7 @@ flowchart LR
 
 - **One sidebar workspace**, containing native cmux terminal/browser panes.
 - **Native autosave + explicit Open:** layouts, split proportions, tabs, browser URLs, and terminal/session identities. Changes save after a short pause; conflicting copies pause instead of overwriting one another. Manual Save remains available. See [autosave](docs/AUTOSAVE.md).
-- **One stable HTTPS link per saved workspace.** When code-server is enabled, the link opens its VS Code workbench. Saved panes become editor groups, named tmux terminals, and independent browser previews. The original ttyd page remains at `/classic/`.
+- **One stable HTTPS link per saved workspace.** When code-server is enabled, the link opens its VS Code workbench. Saved panes become editor groups, named tmux terminals, and independent browser previews. The retired `/classic/` URL redirects to the IDE.
 - **Shared Codex conversation:** HAPI supplies independent official terminal frontends and a complete Web/PWA session app. Each HAPI-bound pane fits its own viewer. Ordinary shared shells still use tmux. See [HAPI setup and migration](docs/HAPI.md).
 - **Independent browsers:** each viewer opens a fresh browser instance at the saved URL. Cookies, scrolling, and unsaved forms are not synchronized.
 - **Mac can disconnect:** tmux and VPS services remain running. Rebooting the VPS ends terminal processes; resume agents afterward.
@@ -42,7 +42,7 @@ python3 workspace.py save demo
 python3 workspace.py link demo
 ```
 
-The default SSH alias is `myvps`; set `VWS_SSH_HOST` to change it. Start a coding agent normally in the resulting terminal. New browser panes can be created using cmux itself, then saved. Add another persistent terminal with:
+The default SSH alias is `myvps`; set `VWS_SSH_HOST` to change it. With `codex-shell.sh` sourced in your interactive shell, `codex` starts through upstream HAPI and appears in the shared HAPI app. New browser panes can be created using cmux itself, then saved. Add another persistent terminal with:
 
 ```sh
 python3 workspace.py add-terminal demo second-agent
@@ -56,10 +56,10 @@ An existing agent must be exited normally before its saved conversation is migra
 |---|---|
 | `workspace.py` | Mac Save/Open/list/link/add-terminal CLI using cmux's existing control API |
 | `remote.py` | SSH-only registry, revision checks, Caddy route generation, tmux attachment |
-| `server.py` | Authenticated layout and HTTP/WebSocket adapter in front of ttyd and local apps |
+| `server.py` | Sharing-link authentication and layout metadata; Caddy proxies HTTP/WebSockets |
 | `ide-extension/` | cmux layout integration using Microsoft Simple Browser and adapted Workspace Layout terminal code |
 | `install-ide.py` | Per-workspace code-server service and workspace configuration |
-| `static/` | Link entry and fallback ttyd page |
+| `static/` | Sharing-link entry page |
 | `cmux-relay.py` | Refresh connection metadata for supported cmux relay commands |
 | `install-server.py` | Private runtime state and systemd user service installation |
 | `cmux-diagnostic.py` | Read-only local cmux capability/layout diagnostics |

@@ -20,11 +20,11 @@ cmux source checkout: `be3855bb2d06c7ede52b01de2200f94be1ce1a68`. Installed app 
 - [Remote relay policy](https://github.com/manaflow-ai/cmux/blob/be3855bb2d06c7ede52b01de2200f94be1ce1a68/Packages/macOS/CmuxRemoteWorkspace/Sources/CmuxRemoteWorkspace/Relay/RemoteRelayCommandPolicy.swift): remote requests have an explicit allowlist and ownership checks. The tested installation rejects `browser.snapshot` and `browser.url.get`. Our adapter does not override that policy.
 - [ttyd's documented tmux sharing](https://github.com/tsl0922/ttyd/wiki/Example-Usage) and [HTTP implementation](https://github.com/tsl0922/ttyd/blob/main/src/http.c): reuse the terminal client and protocol unchanged. Installed Ubuntu ttyd: **1.7.4**.
 - [Session Deck](https://github.com/JesseProjects-LLC/session-deck/tree/f04c33f3a67bbf7321109b8b4176434280cb7cc4): inspected its terminal attach service and recursive split-pane component. Its separate workspace database/UI is not imported into this project.
-- [Split.js 1.6.5](https://github.com/nathancahill/split): the actual vendored dependency for web resizing. Its upstream MIT license is preserved in `static/SPLIT-LICENSE.txt`.
+- [Split.js 1.6.5](https://github.com/nathancahill/split): previously vendored for the retired classic UI. Removed with that frontend; its historical license remains in Git history.
 - [Caddy reverse proxy](https://caddyserver.com/docs/caddyfile/directives/reverse_proxy): existing TLS termination and Unix-socket upstream support.
 - [aiohttp](https://docs.aiohttp.org/en/stable/): HTTP/WebSocket transport library, installed as a dependency.
 
-No cmux, Session Deck, or PR source files are copied into this repository. Their API contracts and architectural patterns informed the adapter. We reuse ttyd/Caddy as programs, aiohttp as a dependency, and the unmodified Split.js distribution with its license.
+No cmux, Session Deck, or PR source files are copied into this repository. Their API contracts and architectural patterns informed the adapter. We now reuse Caddy as the HTTP/WebSocket proxy and aiohttp only for the sharing-link service. ttyd and Split.js belonged to the retired frontend.
 
 ## Reused IDE extension code
 

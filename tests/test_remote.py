@@ -63,6 +63,7 @@ class RegistryTests(unittest.TestCase):
         with (
             patch.object(pathlib.Path, "home", return_value=self.root),
             patch.object(remote, "run", side_effect=RuntimeError("reload failed")),
+            patch("caddy_routes.prepare_previews"),
         ):
             with self.assertRaises(RuntimeError):
                 remote.save(copy.deepcopy(self.doc))

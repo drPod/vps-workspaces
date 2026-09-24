@@ -3,7 +3,7 @@
 ## Prerequisites
 
 - macOS with cmux installed at `/Applications/cmux.app` and Python 3.10+.
-- Linux VPS with SSH keys, Python 3.12, tmux, ttyd, systemd user services, and a `~/Coding` directory.
+- Linux VPS with SSH keys, Python 3.12, tmux, systemd user services, and a `~/Coding` directory.
 - DNS resolving the workspace domain and its subdomains to the VPS, with ports 80/443 reachable for Caddy's automatic TLS certificates. Explicit hostnames are generated, so a wildcard TLS certificate is not required.
 - Existing rootless Docker Caddy deployment: container `caddy`, `~/deploy/caddy/sites` mounted at `/etc/caddy/sites` and imported by `/etc/caddy/Caddyfile`, `~/deploy/www` mounted at `/srv`. Caddy must run as the same host user through rootless Docker to read the private Unix socket. Adapt these paths in `remote.py` and `server.py` for other installations.
 
@@ -11,11 +11,10 @@ The initial adapter intentionally builds on an existing reverse proxy instead of
 
 ## VPS setup
 
-Install ttyd and disable any package-provided default listener; only the adapter-managed private sockets should run:
+Install terminal persistence and Python support:
 
 ```sh
-sudo apt-get install tmux ttyd python3-venv
-sudo systemctl disable --now ttyd
+sudo apt-get install tmux python3-venv
 mkdir -p ~/.local/share/vps-workspaces/app ~/Coding
 ```
 
@@ -71,3 +70,5 @@ Run `python3 workspace.py link demo` and open the complete HTTPS URL. Anyone wit
 ## Uninstall
 
 Stop/disable `vps-workspaces.service`, remove only `~/deploy/caddy/sites/vps-workspaces.caddy`, then validate/reload Caddy. Keep the private state directory for recovery until you no longer need it. tmux terminals are independent; detach them normally and stop them only when their work is finished.
+
+Code-server is required for the browser workspace. Caddy forwards IDE and preview traffic directly, using `forward_auth` against the sharing-link service. Preview localhost ports are bridged into the existing `/srv` mount by standard systemd socket proxies.

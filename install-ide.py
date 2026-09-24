@@ -54,7 +54,7 @@ After=network.target
 [Service]
 Environment=VWS_WORKSPACE={name}
 UMask=0077
-ExecStart={binary} --auth none --socket {ide}/code-server.sock --socket-mode 600 --user-data-dir {ide}/data --extensions-dir {extensions} --reconnection-grace-time 60 --disable-telemetry --disable-update-check --disable-workspace-trust --disable-proxy {workspace}
+ExecStart={binary} --auth none --socket {pathlib.Path.home()}/deploy/www/vws-ide-{name}.sock --socket-mode 600 --user-data-dir {ide}/data --extensions-dir {extensions} --reconnection-grace-time 60 --disable-telemetry --disable-update-check --disable-workspace-trust --disable-proxy {workspace}
 Restart=on-failure
 RestartSec=3
 [Install]
@@ -63,6 +63,6 @@ WantedBy=default.target
 subprocess.run(["systemctl", "--user", "daemon-reload"], check=True)
 subprocess.run(["systemctl", "--user", "enable", "--now", unit.name], check=True)
 (root / (name + ".ide")).write_text(
-    json.dumps({"workspace": str(workspace), "socket": str(ide / "code-server.sock")})
+    json.dumps({"workspace": str(workspace), "socket": str(pathlib.Path.home() / "deploy/www" / ("vws-ide-" + name + ".sock"))})
 )
 print("IDE enabled:", name)

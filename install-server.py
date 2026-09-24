@@ -31,7 +31,7 @@ wrapper.chmod(0o700)
 units = pathlib.Path.home() / ".config/systemd/user"
 units.mkdir(parents=True, exist_ok=True)
 (units / "vps-workspaces.service").write_text("""[Unit]
-Description=Shared VPS workspaces (cmux / ttyd adapter)
+Description=VPS workspace sharing-link authentication
 After=network.target
 [Service]
 ExecStart=%h/.local/share/vps-workspaces/venv/bin/python %h/.local/share/vps-workspaces/app/server.py

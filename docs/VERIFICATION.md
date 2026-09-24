@@ -57,3 +57,11 @@ Not yet exercised: IDE file-editing collaboration/conflict handling, arbitrary t
 - Mac rsnapshot: first full snapshot published. Both local project files and the VPS workspace are present; 42 SQLite copies passed restore quick checks from the published snapshot. Homebrew Python and GNU rsync are required on this Mac. A real rsnapshot regression check verifies first-run publication, multiple source folders, and preservation of the prior version after a second snapshot.
 
 - Original Outreach handoff: user authorized the idle native process to exit; HAPI resumed the same native thread. Its latest conversation messages were verified in the app. The existing IDE link passed reload, two viewers, both previews, sharing-link copying, and unauthenticated rejection again.
+
+## Caddy transport and new-session follow-up
+
+- 26 Python tests pass; the new auth tests cover Caddy's auth subrequest contract and preview scopes.
+- Deployed Caddy `reverse_proxy`/`forward_auth`: Outreach passed real Chromium reload, exactly three tabs, two browser viewers, both actual previews, share-link copy, unauthenticated rejection and no page errors. Live HTTP checks rejected cross-origin/missing-origin WebSocket requests for the IDE and previews. A temporary echo upstream verified credential stripping and preservation of application cookies.
+- Retired terminal route returns 404; `/classic/` redirects to the IDE. Layout-only saves skip unchanged Caddy routes.
+- New `codex` sessions launched through fresh Mac zsh and VPS bash registered in HAPI. Native prompts received the expected replies, and both saved transcripts were inspected in Chromium. Both terminals exited normally; the Mac session cold-resumed through its Runner with the same native identity. Disposable verification sessions were archived afterward.
+- This does not provide native database merging, automatic migration of a running agent, or automatic HAPI adoption of desktop-app/script/bypassed sessions.

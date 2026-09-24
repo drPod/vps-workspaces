@@ -5,7 +5,12 @@
     const session = await fetch('/workspace.json');
     if (session.ok) {
       const doc = await session.json();
-      location.replace(doc.ide_url || '/classic/');
+      if (!doc.ide_url) {
+        document.querySelector('h1').textContent = 'Workspace is not ready';
+        document.querySelector('#message').textContent = 'The owner needs to finish setting up this workspace.';
+        return;
+      }
+      location.replace(doc.ide_url);
       return;
     }
     document.querySelector('h1').textContent = 'Use your sharing link';

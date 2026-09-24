@@ -10,7 +10,7 @@ The same sharing URL now opens a full VS Code workbench for workspaces with the 
 - Run **VPS Workspaces: Open Saved cmux Layout** from the command palette to reimport the latest saved layout.
 - Run **VPS Workspaces: Copy Sharing Link** to share the complete link.
 - Reload reimports the saved cmux layout. IDE rearrangements are not written back to cmux.
-- `/classic/` keeps the original ttyd-based page available.
+- `/classic/` redirects to the IDE; the old ttyd page has been removed.
 
 Browser views are independent. Shared terminals still accept input from every attached client. Closing a terminal tab disconnects its tmux attachment; it does not start or stop the agent inside tmux. VS Code may hold a disconnected browser's terminal attachment for the configured reconnection grace period.
 

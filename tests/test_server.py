@@ -43,7 +43,7 @@ class AccessTests(unittest.IsolatedAsyncioTestCase):
         value = server.token(self.access["key"], name, expiry or int(time.time()) + 60)
         return {"Host": "demo.example.test", "Cookie": server.COOKIE + "=" + value}
 
-    async def test_terminal_requires_auth_before_starting_ttyd(self):
+    async def test_protected_routes_require_auth(self):
         for path in (
             "/workspace.json",
             "/terminal/shell/",
@@ -56,15 +56,11 @@ class AccessTests(unittest.IsolatedAsyncioTestCase):
                 path, headers={"Host": "demo.example.test"}, allow_redirects=False
             )
             self.assertEqual(r.status, 401)
-        self.assertEqual(self.client.app["ttyd"], {})
 
     async def test_valid_cookie_can_read_only_its_workspace(self):
         r = await self.client.get("/workspace.json", headers=self.headers())
         self.assertEqual(r.status, 200)
-        self.assertEqual(
-            (await r.json())["layout"]["pane"]["surfaces"][0]["web_url"],
-            "/terminal/shell/",
-        )
+        self.assertEqual((await r.json())["id"], "demo")
         for h in (
             self.headers("other"),
             self.headers(expiry=int(time.time()) - 1),
@@ -126,7 +122,7 @@ class AccessTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_ide_routes_require_installation_and_open_configured_workspace(self):
         r = await self.client.get(
-            "/ide/", headers=self.headers(), allow_redirects=False
+            "/auth", headers=dict(self.headers(), **{"X-Forwarded-Uri": "/ide/"}), allow_redirects=False
         )
         self.assertEqual(r.status, 404)
         (self.root / "demo.ide").write_text(
@@ -138,7 +134,7 @@ class AccessTests(unittest.IsolatedAsyncioTestCase):
             )
         )
         r = await self.client.get(
-            "/ide/", headers=self.headers(), allow_redirects=False
+            "/auth", headers=dict(self.headers(), **{"X-Forwarded-Uri": "/ide/"}), allow_redirects=False
         )
         self.assertEqual(r.status, 302)
         self.assertEqual(
@@ -146,24 +142,20 @@ class AccessTests(unittest.IsolatedAsyncioTestCase):
         )
 
     async def test_cross_origin_websocket_is_rejected(self):
-        # Validate before reaching ttyd; a fake client proves no upstream request.
-        class NoUpstream:
-            def ws_connect(self, *a, **kw):
-                raise AssertionError("Must reject before upstream connection")
+        headers = dict(self.headers(), **{"X-VWS-Upgrade": "websocket", "Origin": "https://evil.test"})
+        r = await self.client.get("/auth", headers=headers)
+        self.assertEqual(r.status, 403)
 
-        from aiohttp.test_utils import make_mocked_request
-
-        req = make_mocked_request(
-            "GET",
-            "/ws",
-            headers={
-                "Host": "demo.example.test",
-                "Upgrade": "websocket",
-                "Origin": "https://evil.test",
-            },
-        )
-        with self.assertRaises(server.web.HTTPForbidden):
-            await server.proxy(req, NoUpstream(), "http://localhost/ws", self.doc, True)
+    async def test_preview_auth_is_scoped_and_accepts_same_origin_websocket(self):
+        self.doc['layout']['pane']['surfaces'].append({'id': 'preview', 'type': 'browser', 'url': 'http://localhost:8765/'})
+        (self.root / 'demo.json').write_text(json.dumps(self.doc))
+        from model import browser_host
+        host = browser_host(self.doc, self.doc['layout']['pane']['surfaces'][1])
+        headers = dict(self.headers(), Host=host, Origin='https://' + host)
+        headers['X-VWS-Upgrade'] = 'websocket'
+        self.assertEqual((await self.client.get('/auth', headers=headers)).status, 204)
+        headers['Cookie'] = self.headers('other')['Cookie']
+        self.assertEqual((await self.client.get('/auth', headers=headers)).status, 401)
 
 
 class ValidationTests(unittest.TestCase):
