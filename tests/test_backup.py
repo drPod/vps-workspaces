@@ -11,6 +11,31 @@ from vps_workspaces import backup
 
 
 class BackupTests(unittest.TestCase):
+    def test_snapshot_deadline_preserves_completed_copy_or_raw_source(self):
+        for elapsed, succeeds in [(1, True), (91, False)]:
+            with self.subTest(elapsed=elapsed), tempfile.TemporaryDirectory() as tmp:
+                home = Path(tmp)
+                source = home / "live.db"
+                stage = home / "stage"
+                stage.mkdir()
+                with sqlite3.connect(source) as connection:
+                    connection.execute("create table example(value text)")
+                    connection.execute("insert into example values ('saved')")
+                with (
+                    patch.object(backup.Path, "home", return_value=home),
+                    patch.object(backup.time, "monotonic", side_effect=[0, elapsed, 100]),
+                ):
+                    manifest = backup.sqlite_copies([home], stage)
+                self.assertTrue(source.exists())
+                self.assertEqual(len(manifest), 1)
+                self.assertEqual("snapshot" in manifest[0], succeeds)
+                if succeeds:
+                    with sqlite3.connect(manifest[0]["snapshot"]) as restored:
+                        self.assertEqual(restored.execute("select value from example").fetchone()[0], "saved")
+                else:
+                    self.assertTrue(manifest[0]["raw_files_preserved"])
+                self.assertFalse(list(stage.rglob("*.partial")))
+
     @unittest.skipUnless(shutil.which("rsnapshot") and shutil.which("rsync"), "requires rsnapshot and rsync")
     def test_first_snapshot_keeps_all_sources_and_next_snapshot_keeps_history(self):
         with tempfile.TemporaryDirectory() as tmp:

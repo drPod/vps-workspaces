@@ -66,7 +66,7 @@ def sqlite_copies(roots: list[Path], stage: Path) -> list[BackupEntry]:
                     src.backup(dst, pages=256, progress=progress, sleep=0.05)
                     if dst.execute("PRAGMA quick_check").fetchone()[0] != "ok":
                         raise sqlite3.DatabaseError("SQLite snapshot verification failed: " + str(source))
-                except sqlite3.DatabaseError as error:
+                except (sqlite3.DatabaseError, TimeoutError) as error:
                     verified = False
                     print(
                         "Database requires attention; preserving raw files:",
@@ -78,7 +78,7 @@ def sqlite_copies(roots: list[Path], stage: Path) -> list[BackupEntry]:
                 finally:
                     dst.close()
                     src.close()
-                    if not verified or time.monotonic() > deadline:
+                    if not verified:
                         temp.unlink(missing_ok=True)
                 if not verified:
                     temp.unlink(missing_ok=True)
