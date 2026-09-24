@@ -8,6 +8,16 @@ import sys
 
 root = pathlib.Path.home() / ".local/share/vps-workspaces"
 session = os.environ.get("VWS_SESSION", "")
+if not session and os.environ.get("HAPI_SESSION_ID"):
+    from model import surfaces
+    for p in root.glob("*.json"):
+        doc = json.loads(p.read_text())
+        if "layout" in doc:
+            matches = [s["session"] for s in surfaces(doc["layout"])
+                       if s.get("hapi_session") == os.environ["HAPI_SESSION_ID"]]
+            if matches:
+                session = matches[0]
+                break
 if not session or "/" in session:
     sys.exit("This cmux adapter must run inside a managed workspace terminal.")
 try:

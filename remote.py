@@ -202,7 +202,8 @@ def attach(name, surface):
     if s is None:
         raise ValueError("Unknown terminal")
     session = s["session"]
-    ensure(session, s.get("cwd"))
+    if not s.get("hapi_session"):
+        ensure(session, s.get("cwd"))
     route = {
         k: v
         for k, v in os.environ.items()
@@ -220,8 +221,11 @@ def attach(name, surface):
         route["saved_at"] = int(time.time())
         atomic(ROOT / (session + ".route"), route)
         for key, value in route.items():
-            if key != "saved_at":
+            if key != "saved_at" and not s.get("hapi_session"):
                 run(*TMUX, "set-environment", "-t", session, key, value)
+    if s.get("hapi_session"):
+        from hapi_bridge import attach as hapi_attach
+        hapi_attach(s["hapi_session"])
     os.execv(TMUX[0], [*TMUX, "attach-session", "-t", "=" + session])
 
 
@@ -239,6 +243,9 @@ if __name__ == "__main__":
                     )
                 )
             )
+        elif action == "hapi-link":
+            from hapi_bridge import link
+            print(json.dumps(link()))
         elif action == "prepare-terminal":
             with open(ROOT / "registry.lock", "w") as lock:
                 fcntl.flock(lock, fcntl.LOCK_EX)
@@ -268,7 +275,7 @@ if __name__ == "__main__":
                     [
                         ensure(s["session"], s.get("cwd"))
                         for s in surfaces(d["layout"])
-                        if s["type"] == "terminal"
+                        if s["type"] == "terminal" and not s.get("hapi_session")
                     ]
                 )
             )

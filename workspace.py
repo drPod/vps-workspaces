@@ -2,6 +2,9 @@
 """Run on a Mac inside cmux. Explicit Save/Open for VPS-backed native workspaces."""
 
 import argparse
+import copy
+import fcntl
+import tempfile
 import json
 import os
 import pathlib
@@ -74,8 +77,30 @@ def attach_command(name, s):
 
 def store(name, value):
     p = STATE / (name + ".json")
-    p.write_text(json.dumps(value, indent=2))
-    p.chmod(0o600)
+    atomic_state(p, value)
+    if isinstance(value, dict) and 'workspace' in value and 'bindings' in value:
+        directory = STATE / 'instances'
+        directory.mkdir(exist_ok=True)
+        atomic_state(directory / (value['workspace'] + '.json'), dict(value, registry_name=name))
+
+
+def atomic_state(p, value):
+    fd, tmp = tempfile.mkstemp(dir=p.parent)
+    with os.fdopen(fd, 'w') as f:
+        json.dump(value, f, indent=2)
+    os.chmod(tmp, 0o600)
+    os.replace(tmp, p)
+
+
+def store_instance(name, state):
+    path = STATE / (name + '.json')
+    current = json.loads(path.read_text()) if path.exists() else {}
+    if current.get('workspace') == state['workspace']:
+        store(name, state)
+    else:
+        directory = STATE / 'instances'
+        directory.mkdir(exist_ok=True)
+        atomic_state(directory / (state['workspace'] + '.json'), dict(state, registry_name=name))
 
 
 def open_workspace(name):
@@ -205,10 +230,8 @@ def open_workspace(name):
     return ws
 
 
-def save_workspace(name):
-    state = json.loads((STATE / (name + ".json")).read_text())
-    doc = state["doc"]
-    current = tree(state["workspace"])
+def snapshot_workspace(name, state, current):
+    doc = copy.deepcopy(state["doc"])
     known = {s["id"]: s for s in surfaces(doc["layout"])}
     known.update(state.get("pending_surfaces", {}))
     panes = {p["id"]: p for p in current["panes"]}
@@ -252,11 +275,27 @@ def save_workspace(name):
     doc["layout"] = convert(current["layout"])
     doc["name"] = current["title"]
     doc["revision"] = state["revision"]
+    return doc
+
+
+def save_state(name, state, current, keep_local=False):
+    doc = snapshot_workspace(name, state, current)
+    if keep_local:
+        doc['revision'] = remote('get', name)['revision']
     saved = remote("save", doc=doc)
     state["revision"] = saved["revision"]
     state["doc"] = saved
     state.pop("pending_surfaces", None)
-    store(name, state)
+    state.pop("autosave_error", None)
+    store_instance(name, state)
+    return saved
+
+
+def save_workspace(name, keep_local=False):
+    with (STATE / 'autosave.lock').open('w') as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        state = json.loads((STATE / (name + ".json")).read_text())
+        saved = save_state(name, state, tree(state['workspace']), keep_local)
     print("Saved revision", saved["revision"])
     print("Share:", remote("link", name))
 
@@ -297,7 +336,7 @@ def add_terminal(name, label):
 if __name__ == "__main__":
     p = argparse.ArgumentParser()
     p.add_argument(
-        "action", choices=["open", "save", "list", "link", "add-terminal", "check"]
+        "action", choices=["open", "save", "list", "link", "add-terminal", "check", "hapi-link", "keep-local", "autosave-status"]
     )
     p.add_argument("name", nargs="?")
     p.add_argument("label", nargs="?")
@@ -306,6 +345,13 @@ if __name__ == "__main__":
         if a.action == "list":
             for d in remote("list"):
                 print(d["id"], d["name"], "https://" + d["host"])
+        elif a.action == "autosave-status":
+            path = STATE / 'autosave-status.json'
+            print(path.read_text() if path.exists() else 'Autosave has not started in cmux yet.')
+        elif a.action == "keep-local":
+            save_workspace(checked_id(a.name), keep_local=True)
+        elif a.action == "hapi-link":
+            print(remote("hapi-link"))
         elif a.action == "link":
             print(remote("link", checked_id(a.name)))
         elif a.action == "open":

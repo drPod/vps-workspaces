@@ -110,14 +110,18 @@ async def cleanup(app):
     await app["http"].close()
 
 
-async def terminal(app, session):
+async def terminal(app, session, workspace=None, surface=None):
+    cache_key = (workspace, surface["id"], surface["hapi_session"]) if surface and surface.get("hapi_session") else session
+    command = (["/usr/bin/python3", str(pathlib.Path(__file__).parent / "remote.py"), "attach", workspace, surface["id"]]
+               if surface and surface.get("hapi_session") else ["/usr/bin/tmux", "-L", "vps-workspaces", "-u", "attach-session", "-t", "=" + session])
     async with app["terminal_lock"]:
-        entry = app["ttyd"].get(session)
+        entry = app["ttyd"].get(cache_key)
         if entry and entry[0].returncode is None:
             return entry[1]
         if entry:
             await entry[1].close()
-        socket = ROOT / (session + ".sock")
+        socket = ROOT / (("hapi-" + hashlib.sha256(repr(cache_key).encode()).hexdigest()[:16]) if isinstance(cache_key, tuple) else session)
+        socket = socket.with_suffix(".sock")
         socket.unlink(missing_ok=True)
         p = await asyncio.create_subprocess_exec(
             "/usr/bin/ttyd",
@@ -128,13 +132,7 @@ async def terminal(app, session):
             "fontSize=14",
             "-t",
             "disableLeaveAlert=true",
-            "/usr/bin/tmux",
-            "-L",
-            "vps-workspaces",
-            "-u",
-            "attach-session",
-            "-t",
-            "=" + session,
+            *command,
             stdout=asyncio.subprocess.DEVNULL,
             stderr=asyncio.subprocess.DEVNULL,
         )
@@ -154,7 +152,7 @@ async def terminal(app, session):
             auto_decompress=False,
             timeout=ClientTimeout(total=None, sock_connect=10),
         )
-        app["ttyd"][session] = (p, client)
+        app["ttyd"][cache_key] = (p, client)
         return client
 
 
@@ -350,7 +348,7 @@ async def handle(req):
         )
         if s is None:
             raise web.HTTPNotFound()
-        client = await terminal(req.app, s["session"])
+        client = await terminal(req.app, s["session"], doc["id"], s)
         suffix = "/" + parts[3] + ("?" + req.query_string if req.query_string else "")
         return await proxy(req, client, "http://localhost" + suffix, doc, True)
     if req.path == "/share-link":

@@ -45,6 +45,9 @@ def validate(doc):
                 seen.add(s["id"])
                 if s["type"] == "terminal":
                     checked_id(s["session"])
+                    if "hapi_session" in s:
+                        from hapi_bridge import checked_session
+                        checked_session(s["hapi_session"])
                 elif s["type"] == "browser":
                     u = urlsplit(s["url"])
                     if (

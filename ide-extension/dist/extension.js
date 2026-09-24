@@ -365,7 +365,24 @@ var root = path.join(os.homedir(), ".local/share/vps-workspaces");
 var name = process.env.VWS_WORKSPACE;
 var previews = [];
 var ownedClients = /* @__PURE__ */ new Map();
+var ownedHapi = /* @__PURE__ */ new Map();
+function processStart(pid) {
+  try {
+    return fs.readFileSync(`/proc/${pid}/stat`, "utf8").split(") ")[1].split(" ")[19];
+  } catch {
+    return void 0;
+  }
+}
 function deactivate() {
+  for (const [pid, start] of ownedHapi) {
+    if (processStart(pid) === start) {
+      try {
+        process.kill(pid, "SIGHUP");
+      } catch {
+      }
+    }
+  }
+  ownedHapi.clear();
   if (!ownedClients.size) return;
   try {
     const lines = (0, import_node_child_process.execFileSync)("/usr/bin/tmux", ["-L", "vps-workspaces", "list-clients", "-F", "#{client_pid}	#{session_name}	#{client_name}"], { encoding: "utf8", timeout: 2e3 });
@@ -400,6 +417,8 @@ async function activate(context) {
       groups: groups(doc.layout, direction)
     });
     for (const p of previews.splice(0)) p.dispose();
+    const restored = vscode3.window.tabGroups.all.flatMap((group) => group.tabs).filter((tab) => tab.input instanceof vscode3.TabInputWebview && tab.input.viewType.includes("simpleBrowser.view"));
+    if (restored.length) await vscode3.window.tabGroups.close(restored, true);
     for (const [index, pane] of panes(doc.layout).entries()) {
       const ordered = pane.surfaces.filter((_, i) => i !== (pane.selected || 0));
       ordered.push(pane.surfaces[pane.selected || 0]);
@@ -410,8 +429,8 @@ async function activate(context) {
           const existing = new Set(vscode3.window.terminals);
           await createTerminals([{
             name: title,
-            shellPath: "/usr/bin/tmux",
-            shellArgs: ["-L", "vps-workspaces", "-u", "attach-session", "-t", "=" + surface.session],
+            shellPath: surface.hapi_session ? "/usr/bin/python3" : "/usr/bin/tmux",
+            shellArgs: surface.hapi_session ? [path.join(root, "app/remote.py"), "attach", doc.id, surface.id] : ["-L", "vps-workspaces", "-u", "attach-session", "-t", "=" + surface.session],
             location: { viewColumn: column, preserveFocus: true },
             isTransient: true
           }]);
@@ -419,7 +438,11 @@ async function activate(context) {
             if (!existing.has(terminal)) {
               context.subscriptions.push(terminal);
               terminal.processId.then((pid) => {
-                if (pid) ownedClients.set(pid, surface.session);
+                if (!pid) return;
+                if (surface.hapi_session) {
+                  const start = processStart(pid);
+                  if (start) ownedHapi.set(pid, start);
+                } else ownedClients.set(pid, surface.session);
               });
             }
           }
@@ -431,6 +454,22 @@ async function activate(context) {
       }
     }
     output.appendLine(`Opened ${doc.id} revision ${doc.revision}: ${panes(doc.layout).length} panes`);
+  }
+  context.subscriptions.push(vscode3.commands.registerCommand("vpsWorkspaces.hapi", async () => {
+    try {
+      const url = (0, import_node_child_process.execFileSync)("/usr/bin/python3", [path.join(root, "app/hapi-workspace.py"), "link"], { encoding: "utf8", timeout: 5e3 }).trim();
+      await vscode3.env.openExternal(vscode3.Uri.parse(url));
+    } catch (error) {
+      report(error);
+    }
+  }));
+  if (fs.existsSync(path.join(root, "hapi/install.json"))) {
+    const status = vscode3.window.createStatusBarItem(vscode3.StatusBarAlignment.Left, 90);
+    status.text = "$(comment-discussion) HAPI Sessions";
+    status.command = "vpsWorkspaces.hapi";
+    status.tooltip = "Open the HAPI session app";
+    status.show();
+    context.subscriptions.push(status);
   }
   context.subscriptions.push(vscode3.commands.registerCommand("vpsWorkspaces.open", () => open().catch(report)));
   context.subscriptions.push(vscode3.commands.registerCommand("vpsWorkspaces.share", async () => {

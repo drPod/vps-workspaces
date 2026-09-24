@@ -13,9 +13,19 @@ const root = path.join(os.homedir(), '.local/share/vps-workspaces');
 const name = process.env.VWS_WORKSPACE;
 const previews: SimpleBrowserView[] = [];
 const ownedClients = new Map<number, string>();
+const ownedHapi = new Map<number, string>();
+function processStart(pid: number): string | undefined {
+  try { return fs.readFileSync(`/proc/${pid}/stat`, 'utf8').split(') ')[1].split(' ')[19]; } catch { return undefined; }
+}
 // VS Code may retain remote PTYs after the extension host disconnects.
 // Detach only this viewer's known tmux clients; never stop the shared session.
 export function deactivate() {
+  for (const [pid, start] of ownedHapi) {
+    if (processStart(pid) === start) {
+      try { process.kill(pid, 'SIGHUP'); } catch { /* Already detached. */ }
+    }
+  }
+  ownedHapi.clear();
   if (!ownedClients.size) return;
   try {
     const lines = execFileSync('/usr/bin/tmux', ['-L', 'vps-workspaces', 'list-clients', '-F', '#{client_pid}\t#{session_name}\t#{client_name}'], {encoding: 'utf8', timeout: 2000});
@@ -46,6 +56,9 @@ export async function activate(context: vscode.ExtensionContext) {
       groups: groups(doc.layout, direction)
     });
     for (const p of previews.splice(0)) p.dispose();
+    const restored = vscode.window.tabGroups.all.flatMap(group => group.tabs).filter(tab =>
+      tab.input instanceof vscode.TabInputWebview && tab.input.viewType.includes('simpleBrowser.view'));
+    if (restored.length) await vscode.window.tabGroups.close(restored, true);
     for (const [index, pane] of panes(doc.layout).entries()) {
       const ordered = pane.surfaces.filter((_: any, i: number) => i !== (pane.selected || 0));
       ordered.push(pane.surfaces[pane.selected || 0]);
@@ -55,14 +68,22 @@ export async function activate(context: vscode.ExtensionContext) {
           const title = `${doc.name}: ${surface.id}`;
           const existing = new Set(vscode.window.terminals);
           await createTerminals([{
-            name: title, shellPath: '/usr/bin/tmux',
-            shellArgs: ['-L', 'vps-workspaces', '-u', 'attach-session', '-t', '=' + surface.session],
+            name: title, shellPath: surface.hapi_session ? '/usr/bin/python3' : '/usr/bin/tmux',
+            shellArgs: surface.hapi_session
+              ? [path.join(root, 'app/remote.py'), 'attach', doc.id, surface.id]
+              : ['-L', 'vps-workspaces', '-u', 'attach-session', '-t', '=' + surface.session],
             location: {viewColumn: column, preserveFocus: true}, isTransient: true
           }]);
           for (const terminal of vscode.window.terminals) {
             if (!existing.has(terminal)) {
               context.subscriptions.push(terminal);
-              terminal.processId.then(pid => {if (pid) ownedClients.set(pid, surface.session);});
+              terminal.processId.then(pid => {
+                if (!pid) return;
+                if (surface.hapi_session) {
+                  const start = processStart(pid);
+                  if (start) ownedHapi.set(pid, start);
+                } else ownedClients.set(pid, surface.session);
+              });
             }
           }
         } else {
@@ -73,6 +94,20 @@ export async function activate(context: vscode.ExtensionContext) {
       }
     }
     output.appendLine(`Opened ${doc.id} revision ${doc.revision}: ${panes(doc.layout).length} panes`);
+  }
+  context.subscriptions.push(vscode.commands.registerCommand('vpsWorkspaces.hapi', async () => {
+    try {
+      const url = execFileSync('/usr/bin/python3', [path.join(root, 'app/hapi-workspace.py'), 'link'], {encoding: 'utf8', timeout: 5000}).trim();
+      await vscode.env.openExternal(vscode.Uri.parse(url));
+    } catch (error) { report(error); }
+  }));
+  if (fs.existsSync(path.join(root, 'hapi/install.json'))) {
+    const status = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 90);
+    status.text = '$(comment-discussion) HAPI Sessions';
+    status.command = 'vpsWorkspaces.hapi';
+    status.tooltip = 'Open the HAPI session app';
+    status.show();
+    context.subscriptions.push(status);
   }
   context.subscriptions.push(vscode.commands.registerCommand('vpsWorkspaces.open', () => open().catch(report)));
   context.subscriptions.push(vscode.commands.registerCommand('vpsWorkspaces.share', async () => {

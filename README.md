@@ -2,7 +2,7 @@
 
 Keep native **cmux** terminal and browser panes on your Mac. Save their arrangement on your own VPS. Reopen them from another Mac, or share a private link with the same running terminals, project files, and browser previews inside **code-server (VS Code in your browser)**.
 
-An experimental integration of existing tools: **cmux + tmux + code-server + Caddy**. No custom terminal emulator, browser engine, cmux build, or cloud workspace provider.
+An experimental integration of existing tools: **cmux + HAPI + tmux + code-server + Caddy**. No custom terminal emulator, browser engine, cmux build, or cloud workspace provider.
 
 > Working prototype, not a general-purpose hosted collaboration platform. Native and web panes work; cmux's installed SSH relay rejects remote browser automation commands. See [verification and limitations](docs/VERIFICATION.md).
 
@@ -13,17 +13,22 @@ flowchart LR
   Mac["Native cmux panes"] -->|ordinary cmux SSH| TM["Named tmux terminals"]
   Mac -->|explicit Save / Open over SSH| JSON["Workspace JSON on VPS"]
   Web["code-server / VS Code"] -->|terminal attachments| TM
+  Mac -->|independent Codex frontend| Agent["HAPI-owned Codex engine"]
+  Web -->|independent Codex frontend| Agent
+  HAPI["HAPI Web / native app"] --> Agent
   Web --> JSON
   Web -->|Microsoft browser previews via HTTPS proxy| Apps["VPS apps / reports"]
   Mac -->|native browser panes| Apps
 ```
 
 - **One sidebar workspace**, containing native cmux terminal/browser panes.
-- **Explicit Save/Open:** layouts, split proportions, tabs, browser URLs, and named tmux sessions. A stale save is rejected instead of silently overwriting another Mac's changes.
+- **Native autosave + explicit Open:** layouts, split proportions, tabs, browser URLs, and terminal/session identities. Changes save after a short pause; conflicting copies pause instead of overwriting one another. Manual Save remains available. See [autosave](docs/AUTOSAVE.md).
 - **One stable HTTPS link per saved workspace.** When code-server is enabled, the link opens its VS Code workbench. Saved panes become editor groups, named tmux terminals, and independent browser previews. The original ttyd page remains at `/classic/`.
-- **Same live terminal:** input from any attached client reaches the same shell/agent. Coordinate typing with collaborators.
+- **Shared Codex conversation:** HAPI supplies independent official terminal frontends and a complete Web/PWA session app. Each HAPI-bound pane fits its own viewer. Ordinary shared shells still use tmux. See [HAPI setup and migration](docs/HAPI.md).
 - **Independent browsers:** each viewer opens a fresh browser instance at the saved URL. Cookies, scrolling, and unsaved forms are not synchronized.
 - **Mac can disconnect:** tmux and VPS services remain running. Rebooting the VPS ends terminal processes; resume agents afterward.
+
+Unencrypted, versioned [rsnapshot backups](docs/BACKUPS.md) can run hourly on both the VPS and Mac, including consistent SQLite copies.
 
 ## Quick start
 
@@ -43,7 +48,7 @@ The default SSH alias is `myvps`; set `VWS_SSH_HOST` to change it. Start a codin
 python3 workspace.py add-terminal demo second-agent
 ```
 
-A running agent outside tmux is not captured by attaching tmux. Exit the original agent normally and resume its saved conversation in the new shared terminal; do not run concurrent copies of the same conversation.
+An existing agent must be exited normally before its saved conversation is migrated into HAPI; see [the migration instructions](docs/HAPI.md). A running agent outside tmux is not captured by attaching tmux. Exit the original agent normally and resume its saved conversation in the new shared terminal; do not run concurrent copies of the same conversation.
 
 ## What is in this repository
 
