@@ -1,0 +1,11 @@
+__pycache__/
+*.py[cod]
+.venv/
+.env*
+*.route
+*.sock
+access.json
+settings.json
+share-password
+artifacts/
+.DS_Store

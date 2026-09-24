@@ -1,0 +1,12 @@
+{
+  "id": "demo",
+  "name": "Demo",
+  "layout": {
+    "direction": "horizontal",
+    "split": 0.5,
+    "children": [
+      {"pane": {"surfaces": [{"id": "agent", "title": "Agent", "type": "terminal", "session": "demo-agent", "cwd": "~/Coding"}], "selected": 0}},
+      {"pane": {"surfaces": [{"id": "preview", "title": "Preview", "type": "browser", "url": "http://localhost:3000/"}], "selected": 0}}
+    ]
+  }
+}
