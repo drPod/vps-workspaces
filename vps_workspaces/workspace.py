@@ -224,6 +224,22 @@ def snapshot_workspace(name: str, state: Instance, current: JsonObject) -> Works
     known = {s["id"]: s for s in surfaces(doc["layout"])}
     known.update(state.get("pending_surfaces", {}))
     panes = {p["id"]: p for p in current["panes"]}
+    unbound = [
+        s
+        for p in current["panes"]
+        for s in p["surfaces"]
+        if s["type"] == "terminal"
+        and s.get("title") != "VPS Workspaces · Link"
+        and state["bindings"].get(s["id"]) not in known
+    ]
+    if unbound:
+        discovered = remote("surface-agents", name, state["workspace"])
+        for s in unbound:
+            if s["id"] in discovered:
+                agent = discovered[s["id"]]
+                known[agent["id"]] = agent
+                state["bindings"][s["id"]] = agent["id"]
+                state.setdefault("pending_surfaces", {})[agent["id"]] = agent
 
     def convert(n: JsonObject) -> Layout:
         if "pane" not in n:

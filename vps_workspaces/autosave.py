@@ -10,6 +10,7 @@ from typing import Any
 
 from vps_workspaces import workspace as ws
 from vps_workspaces.contracts import Workspace
+from vps_workspaces.model import surfaces
 
 
 def fingerprint(doc: Workspace) -> str:
@@ -29,6 +30,7 @@ class Debounce:
     def __init__(self, seconds: float = 2) -> None:
         self.seconds = seconds
         self.pending: dict[str, tuple[str, float]] = {}
+        self.unsettled: dict[str, tuple[str, float]] = {}
 
     def ready(self, key: str, baseline: str, value: str, now: float) -> bool:
         if baseline == value:
@@ -81,6 +83,14 @@ def tick(debounce: Debounce, errors: dict[str, tuple[int, str, bool]], now: floa
             try:
                 candidate = copy.deepcopy(state)
                 doc = ws.snapshot_workspace(name, candidate, trees[wid])
+                saved_agents = {s["id"] for s in surfaces(state["doc"]["layout"]) if s["type"] == "terminal"}
+                visible = {s["id"] for s in surfaces(doc["layout"])}
+                if saved_agents - visible:
+                    raise ValueError(
+                        "A saved terminal is detached or closed. Its saved binding was preserved; "
+                        "reconnect it, or use an explicit workspace save to confirm removal."
+                    )
+                debounce.unsettled.pop(wid, None)
                 value = fingerprint(doc)
                 baseline = fingerprint(state["doc"])
                 if wid in errors and not errors[wid][2]:
@@ -101,6 +111,13 @@ def tick(debounce: Debounce, errors: dict[str, tuple[int, str, bool]], now: floa
                 ws.atomic_state(drafts / p.name, {"state": state, "native_tree": trees[wid], "error": message})
                 status[wid].update(state="paused", error=message)
 
+                if message.startswith("Unmanaged terminal:"):
+                    previous, since = debounce.unsettled.setdefault(wid, (message, now))
+                    if previous != message:
+                        debounce.unsettled[wid] = (message, now)
+                        since = now
+                    if now - since < 10:
+                        continue
                 conflict = "Workspace changed on another Mac" in message
                 if errors.get(wid, (None, None))[1] != message:
                     notify(name, message)
@@ -121,6 +138,14 @@ def main() -> None:
         ws.cmux("ping")
         debounce = Debounce()
         errors: dict[str, tuple[int, str, bool]] = {}
+        status_path = ws.STATE / "autosave-status.json"
+        if status_path.exists():
+            previous = json.loads(status_path.read_text()).get("instances", {})
+            errors = {
+                wid: (s["revision"], s["error"], "Workspace changed on another Mac" in s["error"])
+                for wid, s in previous.items()
+                if s.get("state") == "paused" and s.get("error")
+            }
         while True:
             try:
                 tick(debounce, errors, time.monotonic())

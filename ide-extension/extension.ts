@@ -95,6 +95,7 @@ export async function activate(context: vscode.ExtensionContext) {
   async function open() {
     const doc = load();
     if (!vscode.workspace.isTrusted) return;
+    await vscode.commands.executeCommand("workbench.action.closeSidebar");
     await vscode.commands.executeCommand("workbench.action.closeAuxiliaryBar");
     const direction =
       "direction" in doc.layout ? doc.layout.direction : "horizontal";

@@ -44,10 +44,14 @@ Install native palette actions with `python3 workspace.py install cmux` on the M
 - **Copy Browser Workspace Link** copies the current managed workspace's link. cmux's native action
   opens a short-lived terminal tab; the command copies through macOS or native OSC 52 clipboard
   handling and closes only that helper tab. It never types a command into an agent prompt.
+  Link lookup retains the initial relay identity after terminal recovery; new relay records
+  also retain their owning workspace name, independently of the current pane layout.
 
 Press Cmd+Shift+, to reload cmux configuration if installation was performed over SSH.
 This installed-version integration has been source-checked; the deployment verification
 record identifies any local palette tests still pending.
+Browser workspaces open with the file sidebar collapsed; toggle it normally from VS Code when needed.
+
 The ordinary local New Workspace action remains available; arbitrary local processes are not
 automatically migrated to the VPS.
 
@@ -73,10 +77,19 @@ and preview content. On the Mac, `doctor` reports cmux access and saved autosave
 | Autosave conflict | Inspect `autosave-drafts`; reopen the latest workspace, or explicitly use `keep-local` after reviewing both layouts |
 | Access denied from cmux | Run the command in a local cmux shell; SSH ancestry does not satisfy its access policy |
 | Missing agent after reboot | Inspect HAPI Hub/Runner, then reopen the saved workspace to resume through HAPI |
+| Agent terminal vanished after SSH reconnect | From a local cmux shell, inspect `cmux ssh-session-list --all-workspaces` and use `cmux ssh-session-attach --session-id ID --workspace WORKSPACE` to reattach the existing PTY |
 | Linux sandbox namespace failure | Check the installed distribution's AppArmor bubblewrap profile; preserve global restrictions |
 
 Do not use `keep-local` merely to silence an error. Browser storage and draft text are not
 part of layout autosave. The backup configuration is authoritative for snapshot locations.
+
+Autosave discovers new VPS HAPI Codex terminals from their live process ancestry and session
+metadata; it binds the existing conversation without spawning another agent. Plain unmanaged
+shells still require `add-terminal`. Temporary unmanaged terminals get ten seconds to close
+before a desktop alert; no incomplete layout is saved during that grace period. An unchanged save error is not notified again after an
+autosave worker restart. If a saved terminal disappears, autosave preserves its binding and
+writes a recovery draft instead of saving a browser-only replacement. Reattach the terminal;
+if its removal was intentional, an explicit `workspace.py save NAME` confirms that removal.
 
 ## Update or roll back
 

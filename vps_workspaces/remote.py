@@ -131,16 +131,26 @@ def current_name() -> str:
     hapi = os.environ.get("HAPI_SESSION_ID")
     matches = set()
     for doc in WorkspaceRegistry(ROOT).documents():
-        for surface in surfaces(doc["layout"]):
-            if surface["type"] != "terminal":
-                continue
-            route = ROOT / (surface["session"] + ".route")
-            if (session and surface["session"] == session) or (hapi and surface.get("hapi_session") == hapi):
-                matches.add(doc["id"])
-            elif workspace_id and route.exists():
-                data = json.loads(route.read_text())
-                if data.get("CMUX_WORKSPACE_ID") == workspace_id:
-                    matches.add(doc["id"])
+        terminals = [s for s in surfaces(doc["layout"]) if s["type"] == "terminal"]
+        if any((session and s["session"] == session) or (hapi and s.get("hapi_session") == hapi) for s in terminals):
+            matches.add(doc["id"])
+        if workspace_id:
+            sessions = {s["session"] for s in terminals} | {terminal_session(doc["id"], "agent")}
+            for terminal in sessions:
+                route = ROOT / (terminal + ".route")
+                if route.exists():
+                    data = json.loads(route.read_text())
+                    if str(data.get("CMUX_WORKSPACE_ID", "")).casefold() == workspace_id.casefold():
+                        matches.add(doc["id"])
+    if workspace_id:
+        for route in ROOT.glob("*.route"):
+            data = json.loads(route.read_text())
+            if (
+                data.get("workspace_name")
+                and str(data.get("CMUX_WORKSPACE_ID", "")).casefold() == workspace_id.casefold()
+                and (ROOT / (checked_id(data["workspace_name"]) + ".json")).exists()
+            ):
+                matches.add(data["workspace_name"])
     if len(matches) != 1:
         raise ValueError("No unique managed workspace found; specify its name")
     return matches.pop()
@@ -149,6 +159,63 @@ def current_name() -> str:
 def terminal_session(name: str, label: str) -> str:
     full = name + "-" + label
     return full if len(full) <= 48 else full[:35] + "-" + hashlib.sha256(full.encode()).hexdigest()[:12]
+
+
+def surface_agents(name: str, workspace_id: str) -> dict[str, Surface]:
+    """Match live HAPI processes to native panes without starting or migrating agents."""
+    from vps_workspaces.hapi_bridge import Hapi
+
+    checked_id(name)
+    sessions = {s["id"]: s for s in Hapi().request("/api/sessions")["sessions"] if s.get("active")}
+    urls = {
+        s["metadata"]["hapiMcpUrl"]: sid for sid, s in sessions.items() if (s.get("metadata") or {}).get("hapiMcpUrl")
+    }
+    matches: dict[str, set[str]] = {}
+    for process in pathlib.Path("/proc").glob("[0-9]*"):
+        try:
+            command = (process / "cmdline").read_bytes().decode().split("\0")
+            if len(command) < 3 or pathlib.Path(command[0]).name != "hapi":
+                continue
+            sid = None
+            if command[1] == "resume" and command[2] in sessions:
+                sid = command[2]
+            elif command[1] == "mcp" and "--url" in command:
+                sid = urls.get(command[command.index("--url") + 1])
+            if not sid:
+                continue
+            for _ in range(12):
+                env = dict(
+                    item.split("=", 1)
+                    for item in (process / "environ").read_bytes().decode().split("\0")
+                    if "=" in item
+                )
+                if env.get("CMUX_WORKSPACE_ID") == workspace_id and env.get("CMUX_SURFACE_ID"):
+                    matches.setdefault(env["CMUX_SURFACE_ID"], set()).add(sid)
+                    break
+                parent = (process / "stat").read_text().rsplit(")", 1)[1].split()[1]
+                if parent == "0":
+                    break
+                process = pathlib.Path("/proc") / parent
+        except (OSError, ValueError, IndexError, UnicodeError):
+            continue
+    result: dict[str, Surface] = {}
+    for native_id, candidates in matches.items():
+        if len(candidates) != 1:
+            continue
+        sid = next(iter(candidates))
+        metadata = sessions[sid].get("metadata") or {}
+        if metadata.get("flavor") != "codex":
+            continue
+        label = "agent-" + native_id.lower()
+        checked_id(label)
+        result[native_id] = {
+            "id": label,
+            "type": "terminal",
+            "session": terminal_session(name, label),
+            "hapi_session": sid,
+            "cwd": metadata.get("path", "~/Coding"),
+        }
+    return result
 
 
 def prepare_terminal(name: str, label: str, revision: int | str) -> Surface:
@@ -236,7 +303,7 @@ def attach(name: str, surface: str) -> NoReturn:
         )
     }
     if route.get("CMUX_SOCKET_PATH"):
-        atomic(ROOT / (session + ".route"), {**route, "saved_at": int(time.time())})
+        atomic(ROOT / (session + ".route"), {**route, "workspace_name": name, "saved_at": int(time.time())})
         for key, value in route.items():
             if key != "saved_at" and not s.get("hapi_session"):
                 run([*TMUX, "set-environment", "-t", session, key, value])
@@ -260,6 +327,8 @@ def main() -> None:
                 print(json.dumps(prepare(sys.argv[2])))
         elif action == "get":
             print(json.dumps(load(sys.argv[2])))
+        elif action == "surface-agents":
+            print(json.dumps(surface_agents(sys.argv[2], sys.argv[3])))
         elif action == "link":
             print(json.dumps(WorkspaceRegistry(ROOT).sharing_link(sys.argv[2])))
         elif action == "hapi-link":

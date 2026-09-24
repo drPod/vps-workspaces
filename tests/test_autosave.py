@@ -50,7 +50,13 @@ class AutosaveTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp, patch.object(workspace, "STATE", Path(tmp)):
             for wid in ("one", "two"):
                 workspace.store(
-                    "demo", {"workspace": wid, "bindings": {}, "revision": 1, "doc": {"id": "demo", "name": "old"}}
+                    "demo",
+                    {
+                        "workspace": wid,
+                        "bindings": {},
+                        "revision": 1,
+                        "doc": {"id": "demo", "name": "old", "layout": {"pane": {"surfaces": []}}},
+                    },
                 )
             trees = {"windows": [{"workspaces": [{"id": "one"}, {"id": "two"}]}]}
             server_revision = [1]
@@ -80,3 +86,55 @@ class AutosaveTests(unittest.TestCase):
             status = json.loads((Path(tmp) / "autosave-status.json").read_text())
             self.assertEqual(sum(s["state"] == "paused" for s in status["instances"].values()), 1)
             self.assertEqual(len(list((Path(tmp) / "autosave-drafts").glob("*.json"))), 1)
+
+    def test_detached_terminal_does_not_erase_saved_agent(self):
+        with tempfile.TemporaryDirectory() as tmp, patch.object(workspace, "STATE", Path(tmp)):
+            workspace.store(
+                "demo",
+                {
+                    "workspace": "one",
+                    "bindings": {},
+                    "revision": 1,
+                    "doc": {"layout": {"pane": {"surfaces": [{"id": "agent", "type": "terminal"}]}}},
+                },
+            )
+            with (
+                patch.object(workspace, "cmux", return_value={"windows": [{"workspaces": [{"id": "one"}]}]}),
+                patch.object(workspace, "snapshot_workspace", return_value={"layout": {"pane": {"surfaces": []}}}),
+                patch.object(workspace, "remote") as remote,
+                patch.object(autosave, "notify") as notify,
+            ):
+                errors = {}
+                debounce = autosave.Debounce()
+                autosave.tick(debounce, errors, 0)
+                autosave.tick(debounce, errors, 3)
+                remote.assert_not_called()
+                notify.assert_called_once()
+            self.assertIn("preserved", errors["one"][1])
+            self.assertTrue((Path(tmp) / "autosave-drafts/one.json").exists())
+
+    def test_transient_helper_does_not_notify_but_persistent_shell_does(self):
+        with tempfile.TemporaryDirectory() as tmp, patch.object(workspace, "STATE", Path(tmp)):
+            doc = {"layout": {"pane": {"surfaces": []}}}
+            workspace.store("demo", {"workspace": "one", "bindings": {}, "revision": 1, "doc": doc})
+            with (
+                patch.object(workspace, "cmux", return_value={"windows": [{"workspaces": [{"id": "one"}]}]}),
+                patch.object(workspace, "snapshot_workspace") as snapshot,
+                patch.object(autosave, "notify") as notify,
+            ):
+                debounce, errors = autosave.Debounce(), {}
+                snapshot.side_effect = ValueError("Unmanaged terminal: helper")
+                autosave.tick(debounce, errors, 0)
+                autosave.tick(debounce, errors, 2)
+                notify.assert_not_called()
+                snapshot.side_effect = None
+                snapshot.return_value = doc
+                autosave.tick(debounce, errors, 3)
+                self.assertEqual(debounce.unsettled, {})
+                snapshot.side_effect = ValueError("Unmanaged terminal: helper")
+                autosave.tick(debounce, errors, 4)
+                autosave.tick(debounce, errors, 13)
+                notify.assert_not_called()
+                autosave.tick(debounce, errors, 14)
+                autosave.tick(debounce, errors, 15)
+                notify.assert_called_once()
