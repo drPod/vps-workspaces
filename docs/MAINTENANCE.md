@@ -112,3 +112,9 @@ The current backend expects Linux systemd, the documented rootless Caddy arrange
 and the pinned Linux amd64 code-server/HAPI releases. It is not a universal installer.
 Workspace capability links grant a terminal under the VPS user; they are intended for
 trusted collaborators, not isolation between untrusted users.
+
+## Move or retire a server
+
+Follow the [migration and retirement checklist](MIGRATION.md) before cancelling a host.
+It covers state outside the source checkout, final database exports, external routes and
+verification with the old server offline. Keep the actual recovery report private.

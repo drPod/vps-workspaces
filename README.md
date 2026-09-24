@@ -8,7 +8,7 @@ Codex session; cmux and code-server supply the interfaces.
 
 [Get started](docs/INSTALL.md) · [Commands & maintenance](docs/MAINTENANCE.md) ·
 [Architecture](docs/ARCHITECTURE.md) · [For agents](AGENTS.md) ·
-[Verified behavior & limits](docs/VERIFICATION.md)
+[Verified behavior & limits](docs/VERIFICATION.md) · [Server migration](docs/MIGRATION.md)
 
 ## What you get
 
