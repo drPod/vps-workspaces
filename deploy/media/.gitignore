@@ -1,4 +1,0 @@
-.env
-nordvpn.env
-config/
-!.env.example

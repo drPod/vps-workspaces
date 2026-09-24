@@ -84,6 +84,7 @@ current workspace ownership, service names and recovery notes. Do not publish th
 
 ## Optional media
 
-`deploy/media/` contains Compose templates; [docs/MEDIA.md](docs/MEDIA.md) describes setup
-and checks. The private deployment is `~/deploy/media-stack` when present. Keep media
-and credentials outside this checkout. Gluetun owns the VPN firewall; do not handroll one.
+The media stack and invitation launcher moved to [drPod/watch-link](https://github.com/drPod/watch-link).
+Read that repository's AGENTS.md for media work. [docs/MEDIA.md](docs/MEDIA.md) keeps the handoff
+and backup relationship. The private deployment remains `~/deploy/media-stack`; credentials
+and media stay outside either checkout. Gluetun owns the VPN firewall.
