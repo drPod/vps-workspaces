@@ -46,3 +46,12 @@ Code-server 4.138.0 / Code 1.138.0 was exercised in real Chromium at 1600×1000,
 Screenshots were inspected locally and are not published because they contain workspace content. The pinned code-server build requests two missing optional `vsda` browser assets (404); the terminal, extension host, editor workbench, and previews still connected successfully. Native cmux's terminal process was not restarted. Actual terminal input in the live agent was intentionally not injected during the IDE smoke test.
 
 Not yet exercised: IDE file-editing collaboration/conflict handling, arbitrary third-party extensions, two different physical Macs, or bidirectional synchronization of IDE layout changes back into cmux.
+
+## HAPI, autosave and backups follow-up
+
+- 24 Python tests and 4 extension tests pass, including conflict rejection across two locally edited workspace copies, refusal to bind over a running agent, and SQLite backup with committed WAL data. GitHub CI passed commit `1b69206`.
+- Installed HAPI package: real web message/response, two official terminal sizes, independent resize, secondary/last-viewer detach, supervised Runner PID replacement without stopping the agent, Hub reconnect, and cold resume of the same native thread/history passed.
+- HAPI code-server workspace: actual Codex output plus two live previews, three tabs after reload, two isolated viewers, resize and unauthenticated rejection passed. Existing Outreach repeated the browser checks successfully.
+- Native autosave: user sourced the shell hook inside cmux; the watcher is running and reports Outreach as watched. Multi-copy conflict behavior is covered by tests; a physical second Mac was not available.
+- VPS rsnapshot: first snapshot complete. Copied HAPI and Codex-history database snapshots to disposable restore locations and passed SQLite quick checks; restored Outreach JSON validated. The unrelated pre-existing `gradient-hackathon/data/swarmci.db` is corrupt and preserved as raw files with a recorded warning.
+- Mac rsnapshot: first full copy is in progress; successful completion and restore verification will be recorded after it finishes. Modern Homebrew Python is used for SQLite compatibility; all 19 detected Mac database copies passed preparation without warnings.

@@ -1,6 +1,6 @@
 # Independent Codex terminal views
 
-Research date: 2026-09-23. Candidate evaluation; no production migration.
+Research date: 2026-09-23. Initial candidate evaluation below; the complete HAPI app has since been deployed and tested with Runner-owned sessions. See [current integration and verification](HAPI.md). The original Outreach conversation still awaits its normal stop/resume handoff.
 
 ## Existing implementation
 
