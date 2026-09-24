@@ -40,7 +40,7 @@ services:
     restart: unless-stopped
     network_mode: service:gluetun
     depends_on:
-      gluetun: {condition: service_healthy}
+      gluetun: {condition: service_healthy, restart: true}
     environment: {PUID: "0", PGID: "0", TZ: Etc/UTC, WEBUI_PORT: "8080"}
     volumes: ["./config/qbittorrent:/config", "${MEDIA_ROOT:?Set MEDIA_ROOT}:/data"]
     mem_limit: 512m
