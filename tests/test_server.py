@@ -1,4 +1,3 @@
-import hashlib
 import json
 import pathlib
 import tempfile
@@ -8,6 +7,7 @@ from unittest.mock import patch
 from aiohttp.test_utils import TestClient, TestServer
 import server
 from model import validate
+from sharing import share_key
 
 
 class AccessTests(unittest.IsolatedAsyncioTestCase):
@@ -27,13 +27,7 @@ class AccessTests(unittest.IsolatedAsyncioTestCase):
             },
         }
         (self.root / "demo.json").write_text(json.dumps(self.doc))
-        self.access = {
-            "key": "test-only-secret",
-            "salt": "00" * 16,
-            "password_hash": hashlib.scrypt(
-                b"correct", salt=bytes(16), n=16384, r=8, p=1
-            ).hex(),
-        }
+        self.access = {"key": "test-only-secret"}
         (self.root / "access.json").write_text(json.dumps(self.access))
         self.patch = patch.object(server, "ROOT", self.root)
         self.patch.start()
@@ -50,11 +44,16 @@ class AccessTests(unittest.IsolatedAsyncioTestCase):
         return {"Host": "demo.example.test", "Cookie": server.COOKIE + "=" + value}
 
     async def test_terminal_requires_auth_before_starting_ttyd(self):
-        for path in ("/", "/workspace.json", "/terminal/shell/", "/terminal/shell/ws"):
+        for path in (
+            "/workspace.json",
+            "/terminal/shell/",
+            "/terminal/shell/ws",
+            "/share-link",
+        ):
             r = await self.client.get(
                 path, headers={"Host": "demo.example.test"}, allow_redirects=False
             )
-            self.assertEqual(r.status, 302)
+            self.assertEqual(r.status, 401)
         self.assertEqual(self.client.app["ttyd"], {})
 
     async def test_valid_cookie_can_read_only_its_workspace(self):
@@ -72,29 +71,50 @@ class AccessTests(unittest.IsolatedAsyncioTestCase):
             r = await self.client.get(
                 "/workspace.json", headers=h, allow_redirects=False
             )
-            self.assertEqual(r.status, 302)
+            self.assertEqual(r.status, 401)
 
-    async def test_login_requires_same_origin_and_sets_secure_cookie(self):
+    async def test_link_join_requires_same_origin_and_sets_secure_cookie(self):
+        key = share_key(self.access, "demo")
         r = await self.client.post(
-            "/login",
+            "/join",
             headers={"Host": "demo.example.test", "Origin": "https://evil.test"},
-            data={"password": "correct"},
+            json={"key": key},
         )
         self.assertEqual(r.status, 403)
         r = await self.client.post(
-            "/login",
+            "/join",
             headers={
                 "Host": "demo.example.test",
                 "Origin": "https://demo.example.test",
             },
-            data={"password": "correct"},
-            allow_redirects=False,
+            json={"key": key},
         )
-        self.assertEqual(r.status, 302)
+        self.assertEqual(r.status, 200)
         cookie = r.headers["Set-Cookie"]
-        self.assertIn("HttpOnly", cookie)
-        self.assertIn("Secure", cookie)
-        self.assertIn("Domain=demo.example.test", cookie)
+        for attribute in ("HttpOnly", "Secure", "Domain=demo.example.test"):
+            self.assertIn(attribute, cookie)
+
+    async def test_wrong_or_other_workspace_link_cannot_join(self):
+        for key in ("incorrect", share_key(self.access, "other"), "非ASCII", None):
+            r = await self.client.post(
+                "/join",
+                headers={
+                    "Host": "demo.example.test",
+                    "Origin": "https://demo.example.test",
+                },
+                json={"key": key},
+            )
+            self.assertEqual(r.status, 401)
+
+    async def test_entry_has_no_password_form_and_link_is_retrievable_after_join(self):
+        r = await self.client.get("/", headers={"Host": "demo.example.test"})
+        self.assertEqual(r.status, 200)
+        self.assertNotIn('type="password"', await r.text())
+        r = await self.client.get("/share-link", headers=self.headers())
+        self.assertEqual(
+            (await r.json())["url"],
+            "https://demo.example.test/#key=" + share_key(self.access, "demo"),
+        )
 
     async def test_unknown_host_and_terminal_are_not_proxied(self):
         r = await self.client.get("/", headers={"Host": "evil.test"})

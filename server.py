@@ -4,7 +4,6 @@
 import asyncio
 import hashlib
 import hmac
-import html
 import json
 import os
 import pathlib
@@ -19,6 +18,7 @@ from aiohttp import (
     DummyCookieJar,
 )
 from model import surfaces, origin, browser_host, local_browser
+from sharing import share_key, share_url
 
 ROOT = pathlib.Path.home() / ".local/share/vps-workspaces"
 STATIC = pathlib.Path(__file__).parent / "static"
@@ -77,15 +77,14 @@ def authorized(req, access, doc):
         return False
 
 
-def login_page(doc, error=""):
-    return web.Response(
-        text="""<!doctype html><meta name="viewport" content="width=device-width"><title>Open workspace</title><style>body{font:16px system-ui;background:#10151d;color:#e9edf4;display:grid;place-items:center;height:90vh}form{width:320px}input,button{box-sizing:border-box;width:100%;padding:12px;margin:8px 0;border-radius:7px;border:1px solid #566}button{background:#b9e3bc;cursor:pointer}p{color:#c9a}</style><form method="post" action="/login"><h1>"""
-        + html.escape(doc["name"])
-        + '</h1><label>Workspace password<input type="password" name="password" autocomplete="current-password" required></label><button>Open workspace</button><p>'
-        + html.escape(error)
-        + "</p></form>",
-        content_type="text/html",
-        headers={"Cache-Control": "no-store"},
+def entry_page():
+    return web.FileResponse(
+        STATIC / "entry.html",
+        headers={
+            "Cache-Control": "no-store",
+            "Referrer-Policy": "no-referrer",
+            "Content-Security-Policy": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; frame-ancestors 'none'; base-uri 'none'",
+        },
     )
 
 
@@ -96,7 +95,6 @@ async def startup(app):
         timeout=ClientTimeout(total=None, sock_connect=10),
     )
     app["ttyd"] = {}
-    app["attempts"] = {}
     app["terminal_lock"] = asyncio.Lock()
 
 
@@ -256,48 +254,45 @@ async def proxy(req, client, target, doc, terminal_view=False):
 async def handle(req):
     doc, browser = resolve(req.host.lower())
     access = json.loads((ROOT / "access.json").read_text())
-    if req.path == "/login" and browser is None:
-        if req.method == "POST":
-            if req.headers.get("Origin") != "https://" + doc["host"]:
-                raise web.HTTPForbidden()
-            key = req.headers.get("X-Forwarded-For", "unknown").split(",")[0]
-            now = time.time()
-            attempts = req.app["attempts"]
-            history = [x for x in attempts.get(key, []) if x > now - 60]
-            if len(history) >= 10:
-                raise web.HTTPTooManyRequests(text="Try again in a minute")
-            history.append(now)
-            attempts[key] = history
-            if len(attempts) > 10000:
-                attempts.clear()
-            data = await req.post()
-            given = str(data.get("password", ""))
-            digest = await asyncio.to_thread(
-                hashlib.scrypt,
-                given.encode(),
-                salt=bytes.fromhex(access["salt"]),
-                n=16384,
-                r=8,
-                p=1,
-            )
-            if hmac.compare_digest(digest.hex(), access["password_hash"]):
-                r = web.HTTPFound("/")
-                r.set_cookie(
-                    COOKIE,
-                    token(access["key"], doc["id"], int(time.time()) + 86400),
-                    domain=doc["host"],
-                    secure=True,
-                    httponly=True,
-                    samesite="Lax",
-                    max_age=86400,
-                )
-                return r
-            return login_page(doc, "Incorrect password")
-        return login_page(doc)
+    if req.path == "/join" and browser is None:
+        if req.method != "POST":
+            raise web.HTTPMethodNotAllowed(req.method, ["POST"])
+        if req.headers.get("Origin") != "https://" + doc["host"]:
+            raise web.HTTPForbidden()
+        try:
+            data = await req.json()
+        except (ValueError, UnicodeDecodeError):
+            raise web.HTTPBadRequest(text="Expected a JSON sharing key.")
+        supplied = data.get("key") if isinstance(data, dict) else None
+        if not isinstance(supplied, str) or not hmac.compare_digest(
+            supplied.encode(), share_key(access, doc["id"]).encode()
+        ):
+            raise web.HTTPUnauthorized(text="This sharing link is not valid.")
+        response = web.json_response(
+            {"ok": True}, headers={"Cache-Control": "no-store"}
+        )
+        response.set_cookie(
+            COOKIE,
+            token(access["key"], doc["id"], int(time.time()) + 86400),
+            domain=doc["host"],
+            secure=True,
+            httponly=True,
+            samesite="Lax",
+            max_age=86400,
+        )
+        return response
+    if browser is None and req.path in ("/entry.js", "/style.css"):
+        return web.FileResponse(
+            STATIC / req.path[1:], headers={"Cache-Control": "no-store"}
+        )
     if not authorized(req, access, doc):
-        if req.headers.get("Upgrade"):
-            raise web.HTTPUnauthorized()
-        raise web.HTTPFound("https://" + doc["host"] + "/login")
+        if browser is None and req.path in ("/", "/login") and req.method == "GET":
+            return entry_page()
+        raise web.HTTPUnauthorized(
+            text="Open the original workspace sharing link to join."
+        )
+    if browser is None and req.path == "/login":
+        raise web.HTTPFound("/")
     if browser:
         return await proxy(
             req, req.app["http"], origin(browser["url"]) + req.rel_url.raw_path_qs, doc
@@ -319,6 +314,10 @@ async def handle(req):
         client = await terminal(req.app, s["session"])
         suffix = "/" + parts[3] + ("?" + req.query_string if req.query_string else "")
         return await proxy(req, client, "http://localhost" + suffix, doc, True)
+    if req.path == "/share-link":
+        return web.json_response(
+            {"url": share_url(access, doc)}, headers={"Cache-Control": "no-store"}
+        )
     if req.path == "/workspace.json":
         public = json.loads(json.dumps(doc))
         for s in surfaces(public["layout"]):

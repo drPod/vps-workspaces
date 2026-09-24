@@ -4,11 +4,12 @@
 
 - Installed cmux **0.64.25 (106)** exposes the full tree and browser URLs.
 - Native Open produced a terminal on the left and two working native browser panes on the right, matching the existing workspace.
-- Caddy serves the workspace over valid HTTPS; unauthenticated page and terminal requests redirect to login.
-- A real Chromium browser logged in, loaded the report and app in distinct iframe origins, and connected to ttyd.
+- Caddy serves the workspace over valid HTTPS; the full sharing link joins without a password. Requests for terminal or workspace data without an access cookie are rejected.
+- A real Chromium browser joined, loaded the report and app in distinct iframe origins, and connected to ttyd.
 - Keyboard input from the web terminal appeared in the same named tmux session used by native cmux.
 - No browser page errors in that smoke test.
-- Six automated tests cover authentication and validation boundaries.
+- Passwordless link entry, copying the full link, a second isolated viewer, and rejection of an invalid cookie passed a live Chromium check.
+- Twelve automated tests cover authentication, validation, terminal reservation, and failed-publication recovery.
 - Native Save/Open reconstructed a second client workspace with the same split tree and two URLs (revision 2).
 - The original agent was stopped normally and resumed inside the managed tmux terminal. Verified a single Codex conversation process with native/web access to its session.
 

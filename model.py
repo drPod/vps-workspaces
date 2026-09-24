@@ -25,6 +25,8 @@ def surfaces(node):
 
 def validate(doc):
     checked_id(doc["id"])
+    if doc["id"] in ("access", "settings"):
+        raise ValueError("That workspace name is reserved")
     if not isinstance(doc.get("name"), str) or len(doc["name"]) > 200:
         raise ValueError("Invalid workspace name")
     seen = set()

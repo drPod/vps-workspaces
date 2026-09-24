@@ -2,7 +2,6 @@
 """Run on the VPS after copying this repository into ~/.local/share/vps-workspaces/app."""
 
 import argparse
-import hashlib
 import json
 import pathlib
 import secrets
@@ -24,21 +23,7 @@ def private(name, value):
 
 private("settings.json", json.dumps({"base_domain": a.base_domain}))
 if not (root / "access.json").exists():
-    password = secrets.token_urlsafe(24)
-    salt = secrets.token_bytes(16)
-    private(
-        "access.json",
-        json.dumps(
-            {
-                "salt": salt.hex(),
-                "password_hash": hashlib.scrypt(
-                    password.encode(), salt=salt, n=16384, r=8, p=1
-                ).hex(),
-                "key": secrets.token_hex(32),
-            }
-        ),
-    )
-    private("share-password", password + "\n")
+    private("access.json", json.dumps({"key": secrets.token_hex(32)}))
 (root / "bin").mkdir(exist_ok=True)
 wrapper = root / "bin/cmux"
 wrapper.write_bytes((root / "app/cmux-relay.py").read_bytes())
@@ -59,4 +44,4 @@ WantedBy=default.target
 """)
 subprocess.run(["systemctl", "--user", "daemon-reload"], check=True)
 subprocess.run(["systemctl", "--user", "enable", "--now", "vps-workspaces"], check=True)
-print("Service installed. Share password is in", root / "share-password")
+print("Service installed. Retrieve each private link with remote.py link <workspace>.")

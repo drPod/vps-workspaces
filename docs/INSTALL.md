@@ -40,7 +40,7 @@ python3 ~/.local/share/vps-workspaces/app/remote.py save < examples/demo.json
 python3 ~/.local/share/vps-workspaces/app/remote.py ensure demo
 ```
 
-This validates/reloads Caddy after adding explicit workspace and app hostnames. No existing sites are overwritten. The initial shared password is stored at `~/.local/share/vps-workspaces/share-password`. Retrieve it privately over SSH and share it only with intended collaborators.
+This validates/reloads Caddy after adding explicit workspace and app hostnames. No existing sites are overwritten. Retrieve the complete private sharing URL with `python3 ~/.local/share/vps-workspaces/app/remote.py link demo`. No password is required.
 
 ## Mac setup
 
@@ -66,7 +66,7 @@ Add terminal panes through `add-terminal` so they get persistent session identit
 
 ## Share
 
-Run `python3 workspace.py link demo`, open that HTTPS URL, and enter the deployment password. The link remains stable across saves. Browser pages must allow iframe embedding. An agent started outside the managed tmux session must be stopped/resumed there deliberately.
+Run `python3 workspace.py link demo` and open the complete HTTPS URL. Anyone with that link joins automatically. The link remains stable across saves. Use **Copy sharing link** in the page to share it again; the address bar no longer contains the access key after joining. Browser pages must allow iframe embedding. An agent started outside the managed tmux session must be stopped/resumed there deliberately.
 
 ## Uninstall
 

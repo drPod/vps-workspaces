@@ -2,6 +2,7 @@
 """SSH-only registry and tmux attachment adapter; not exposed through HTTP."""
 
 import fcntl
+import hashlib
 import json
 import os
 import pathlib
@@ -10,6 +11,7 @@ import sys
 import tempfile
 import time
 from model import checked_id, validate, surfaces, browser_host, local_browser
+from sharing import share_url
 
 ROOT = pathlib.Path.home() / ".local/share/vps-workspaces"
 ROOT.mkdir(parents=True, exist_ok=True)
@@ -48,12 +50,11 @@ def save(doc):
     )
     doc["revision"] = (old or {}).get("revision", 0) + 1
     doc["saved_at"] = int(time.time())
-    atomic(path, doc)
     hosts = []
     for p in ROOT.glob("*.json"):
         if p.name in ("access.json", "settings.json"):
             continue
-        d = json.loads(p.read_text())
+        d = doc if p == path else json.loads(p.read_text())
         if "layout" not in d:
             continue
         hosts.append(d["host"])
@@ -62,13 +63,21 @@ def save(doc):
             for s in surfaces(d["layout"])
             if s["type"] == "browser" and local_browser(s)
         )
+    if not path.exists():
+        hosts.append(doc["host"])
+        hosts.extend(
+            browser_host(doc, s)
+            for s in surfaces(doc["layout"])
+            if s["type"] == "browser" and local_browser(s)
+        )
     site = pathlib.Path.home() / "deploy/caddy/sites/vps-workspaces.caddy"
     previous = site.read_text() if site.exists() else None
-    site.write_text(
-        ", ".join(sorted(set(hosts)))
-        + " {\n reverse_proxy unix//srv/vps-workspaces.sock\n}\n"
-    )
+    atomic(path, doc)
     try:
+        site.write_text(
+            ", ".join(sorted(set(hosts)))
+            + " {\n reverse_proxy unix//srv/vps-workspaces.sock\n}\n"
+        )
         run(
             "docker",
             "exec",
@@ -92,16 +101,47 @@ def save(doc):
             stderr=subprocess.DEVNULL,
         )
     except Exception:
-        if previous is None:
-            site.unlink(missing_ok=True)
-        else:
-            site.write_text(previous)
         if old:
             atomic(path, old)
         else:
             path.unlink(missing_ok=True)
+        if previous is None:
+            site.unlink(missing_ok=True)
+        elif site.read_text() != previous:
+            site.write_text(previous)
         raise
     return doc
+
+
+def prepare_terminal(name, label, revision):
+    """Reserve a terminal without publishing a guessed layout to other clients."""
+    checked_id(label)
+    doc = load(name)
+    if doc["revision"] != int(revision):
+        raise ValueError(
+            "Workspace changed on another Mac. Open the latest version first."
+        )
+    if any(s["id"] == label for s in surfaces(doc["layout"])):
+        raise ValueError("That terminal already exists")
+    pending_path = ROOT / (name + ".pending")
+    pending = json.loads(pending_path.read_text()) if pending_path.exists() else {}
+    if label not in pending:
+        full = name + "-" + label
+        session = (
+            full
+            if len(full) <= 48
+            else full[:35] + "-" + hashlib.sha256(full.encode()).hexdigest()[:12]
+        )
+        pending[label] = {
+            "id": label,
+            "type": "terminal",
+            "title": label,
+            "session": session,
+            "cwd": "~/Coding",
+        }
+        atomic(pending_path, pending)
+    ensure(pending[label]["session"], pending[label]["cwd"])
+    return pending[label]
 
 
 def ensure(session, cwd=None):
@@ -148,10 +188,19 @@ def ensure(session, cwd=None):
 def attach(name, surface):
     doc = load(name)
     s = next(
-        s
-        for s in surfaces(doc["layout"])
-        if s["id"] == surface and s["type"] == "terminal"
+        (
+            s
+            for s in surfaces(doc["layout"])
+            if s["id"] == surface and s["type"] == "terminal"
+        ),
+        None,
     )
+    if s is None:
+        pending_path = ROOT / (name + ".pending")
+        pending = json.loads(pending_path.read_text()) if pending_path.exists() else {}
+        s = pending.get(surface)
+    if s is None:
+        raise ValueError("Unknown terminal")
     session = s["session"]
     ensure(session, s.get("cwd"))
     route = {
@@ -181,6 +230,21 @@ if __name__ == "__main__":
         action = sys.argv[1]
         if action == "get":
             print(json.dumps(load(sys.argv[2])))
+        elif action == "link":
+            print(
+                json.dumps(
+                    share_url(
+                        json.loads((ROOT / "access.json").read_text()),
+                        load(sys.argv[2]),
+                    )
+                )
+            )
+        elif action == "prepare-terminal":
+            with open(ROOT / "registry.lock", "w") as lock:
+                fcntl.flock(lock, fcntl.LOCK_EX)
+                print(
+                    json.dumps(prepare_terminal(sys.argv[2], sys.argv[3], sys.argv[4]))
+                )
         elif action == "save":
             with open(ROOT / "registry.lock", "w") as lock:
                 fcntl.flock(lock, fcntl.LOCK_EX)

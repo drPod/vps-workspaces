@@ -201,7 +201,7 @@ def open_workspace(name):
         },
     )
     print("Opened", doc["name"])
-    print("Share: https://" + doc["host"])
+    print("Share:", remote("link", name))
     return ws
 
 
@@ -210,6 +210,7 @@ def save_workspace(name):
     doc = state["doc"]
     current = tree(state["workspace"])
     known = {s["id"]: s for s in surfaces(doc["layout"])}
+    known.update(state.get("pending_surfaces", {}))
     panes = {p["id"]: p for p in current["panes"]}
 
     def convert(n):
@@ -223,6 +224,8 @@ def save_workspace(name):
         items = []
         selected = 0
         for i, s in enumerate(p["surfaces"]):
+            if s["type"] not in ("terminal", "browser"):
+                raise ValueError("Only terminal and browser panes can be saved")
             old = known.get(state["bindings"].get(s["id"]))
             if s["type"] == "terminal" and old is None:
                 raise ValueError(
@@ -252,8 +255,10 @@ def save_workspace(name):
     saved = remote("save", doc=doc)
     state["revision"] = saved["revision"]
     state["doc"] = saved
+    state.pop("pending_surfaces", None)
     store(name, state)
-    print("Saved revision", saved["revision"], "— https://" + saved["host"])
+    print("Saved revision", saved["revision"])
+    print("Share:", remote("link", name))
 
 
 def add_terminal(name, label):
@@ -264,21 +269,7 @@ def add_terminal(name, label):
         raise ValueError("Open the latest workspace first")
     if any(s["id"] == label for s in surfaces(doc["layout"])):
         raise ValueError("That terminal already exists")
-    session = checked_id((name + "-" + label)[:48])
-    s = {
-        "id": label,
-        "type": "terminal",
-        "title": label,
-        "session": session,
-        "cwd": "~/Coding",
-    }
-    doc["layout"] = {
-        "direction": "horizontal",
-        "split": 0.5,
-        "children": [doc["layout"], {"pane": {"surfaces": [s]}}],
-    }
-    saved = remote("save", doc=doc)
-    remote("ensure", name)
+    s = remote("prepare-terminal", name, label, str(state["revision"]))
     result = cmux(
         "new-pane",
         "--type",
@@ -290,9 +281,15 @@ def add_terminal(name, label):
         "--command",
         attach_command(name, s),
     )
-    state["bindings"][ident(result, "surface")] = label
-    state["doc"] = saved
-    state["revision"] = saved["revision"]
+    surface_id = ident(result, "surface")
+    if not surface_id:
+        raise RuntimeError(
+            "cmux did not return the terminal identity; saved workspace was not changed"
+        )
+    state["bindings"][surface_id] = label
+    # Keep the new binding locally even if Save fails, so Save can be retried.
+    # Only the next live-tree capture is published to the VPS.
+    state.setdefault("pending_surfaces", {})[label] = s
     store(name, state)
     save_workspace(name)
 
@@ -310,7 +307,7 @@ if __name__ == "__main__":
             for d in remote("list"):
                 print(d["id"], d["name"], "https://" + d["host"])
         elif a.action == "link":
-            print("https://" + remote("get", a.name)["host"])
+            print(remote("link", checked_id(a.name)))
         elif a.action == "open":
             cmux("ping")
             open_workspace(checked_id(a.name))

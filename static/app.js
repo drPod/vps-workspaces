@@ -27,3 +27,15 @@ function render(node) {
   catch(e) { document.querySelector('#error').textContent = e.message; }
 })();
 document.querySelector('#reload').onclick = () => location.reload();
+
+document.querySelector('#share').onclick = async () => {
+  const button = document.querySelector('#share');
+  try {
+    const response = await fetch('/share-link');
+    if (!response.ok) throw Error('Could not retrieve sharing link');
+    const {url} = await response.json();
+    try { await navigator.clipboard.writeText(url); button.textContent = 'Copied'; }
+    catch { window.prompt('Copy this sharing link:', url); }
+    setTimeout(() => { button.textContent = 'Copy sharing link'; }, 2000);
+  } catch(error) { document.querySelector('#error').textContent = error.message; }
+};

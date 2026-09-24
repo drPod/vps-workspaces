@@ -14,3 +14,8 @@
 10. Added tests for authentication, expiry/tampering, workspace isolation, unknown upstream rejection, WebSocket origins, and invalid session IDs/URLs. Prepared native Save/Open verification and a public repository with upstream PR references.
 
 11. Native Save/Open verification passed with a second cmux workspace. User completed the stop/resume handoff; verified the intended agent is now running inside the managed terminal.
+
+12. Replaced the password screen with per-workspace capability links at the user’s request. Added a same-origin link exchange, secure session cookies, and a Copy sharing link button. The key stays out of HTTP request URLs and is removed before loading iframes.
+
+13. Changed Add Terminal to reserve the tmux identity first, then publish the actual native layout only after pane creation. Added failure/retry tests and Caddy rollback coverage.
+14. Confirmed that Session Deck contributes no source or frontend dependency; retain its link only as research provenance. Live passwordless sharing passed in two isolated Chromium browser contexts.

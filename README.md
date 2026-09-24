@@ -1,6 +1,6 @@
 # VPS Workspaces
 
-Keep native **cmux** terminal and browser panes on your Mac. Save their arrangement on your own VPS. Reopen them from another Mac, or share an authenticated web link with the same running terminals and embedded browser pages.
+Keep native **cmux** terminal and browser panes on your Mac. Save their arrangement on your own VPS. Reopen them from another Mac, or share a private link with the same running terminals and embedded browser pages.
 
 An experimental integration of existing tools: **cmux + tmux + ttyd + Caddy + Split.js**. No custom terminal emulator, browser engine, cmux build, or cloud workspace provider.
 
@@ -59,7 +59,7 @@ A running agent outside tmux is not captured by attaching tmux. Exit the origina
 | `verify-native.py` | Manual native Save/Open integration verification (defaults to Outreach) |
 | `tests/` | Authentication boundaries and document validation tests |
 
-Runtime JSON, passwords, session cookies, and relay credentials belong under `~/.local/share/vps-workspaces` on the VPS and `~/.local/state/vps-workspaces` on the Mac. They are not included here.
+Runtime JSON, link keys, session cookies, and relay credentials belong under `~/.local/share/vps-workspaces` on the VPS and `~/.local/state/vps-workspaces` on the Mac. They are not included here.
 
 ## Upstream work
 
