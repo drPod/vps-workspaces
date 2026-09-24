@@ -9,3 +9,5 @@ settings.json
 share-password
 artifacts/
 .DS_Store
+
+.ruff_cache/

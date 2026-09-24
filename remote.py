@@ -132,6 +132,10 @@ def ensure(session, cwd=None):
             "120",
             "-y",
             "40",
+            "-e",
+            "VWS_SESSION=" + session,
+            "-e",
+            "PATH=" + env["PATH"],
             "/bin/bash",
             env=env,
         )
