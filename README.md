@@ -1,8 +1,8 @@
 # VPS Workspaces
 
-Keep native **cmux** terminal and browser panes on your Mac. Save their arrangement on your own VPS. Reopen them from another Mac, or share a private link with the same running terminals and embedded browser pages.
+Keep native **cmux** terminal and browser panes on your Mac. Save their arrangement on your own VPS. Reopen them from another Mac, or share a private link with the same running terminals, project files, and browser previews inside **code-server (VS Code in your browser)**.
 
-An experimental integration of existing tools: **cmux + tmux + ttyd + Caddy + Split.js**. No custom terminal emulator, browser engine, cmux build, or cloud workspace provider.
+An experimental integration of existing tools: **cmux + tmux + code-server + Caddy**. No custom terminal emulator, browser engine, cmux build, or cloud workspace provider.
 
 > Working prototype, not a general-purpose hosted collaboration platform. Native and web panes work; cmux's installed SSH relay rejects remote browser automation commands. See [verification and limitations](docs/VERIFICATION.md).
 
@@ -12,22 +12,22 @@ An experimental integration of existing tools: **cmux + tmux + ttyd + Caddy + Sp
 flowchart LR
   Mac["Native cmux panes"] -->|ordinary cmux SSH| TM["Named tmux terminals"]
   Mac -->|explicit Save / Open over SSH| JSON["Workspace JSON on VPS"]
-  Web["Shared workspace page"] -->|ttyd| TM
+  Web["code-server / VS Code"] -->|terminal attachments| TM
   Web --> JSON
-  Web -->|iframes via HTTPS proxy| Apps["VPS apps / reports"]
+  Web -->|Microsoft browser previews via HTTPS proxy| Apps["VPS apps / reports"]
   Mac -->|native browser panes| Apps
 ```
 
 - **One sidebar workspace**, containing native cmux terminal/browser panes.
 - **Explicit Save/Open:** layouts, split proportions, tabs, browser URLs, and named tmux sessions. A stale save is rejected instead of silently overwriting another Mac's changes.
-- **One stable HTTPS link per saved workspace.** The thin page renders the saved split tree; ttyd supplies terminal rendering/input and Split.js handles resizing.
+- **One stable HTTPS link per saved workspace.** When code-server is enabled, the link opens its VS Code workbench. Saved panes become editor groups, named tmux terminals, and independent browser previews. The original ttyd page remains at `/classic/`.
 - **Same live terminal:** input from any attached client reaches the same shell/agent. Coordinate typing with collaborators.
 - **Independent browsers:** each viewer opens a fresh browser instance at the saved URL. Cookies, scrolling, and unsaved forms are not synchronized.
 - **Mac can disconnect:** tmux and VPS services remain running. Rebooting the VPS ends terminal processes; resume agents afterward.
 
 ## Quick start
 
-This initial deployment targets a Linux VPS with systemd, key-based SSH, and an existing **rootless Docker Caddy** reverse proxy. It expects `~/deploy/caddy/sites` to be imported by `/etc/caddy/Caddyfile`, and `~/deploy/www` to be mounted at `/srv` in the `caddy` container. See [installation](docs/INSTALL.md) for exact prerequisites and adaptation points.
+This initial deployment targets a Linux VPS with systemd, key-based SSH, and an existing **rootless Docker Caddy** reverse proxy. It expects `~/deploy/caddy/sites` to be imported by `/etc/caddy/Caddyfile`, and `~/deploy/www` to be mounted at `/srv` in the `caddy` container. See [code-server setup](docs/IDE.md) and [installation](docs/INSTALL.md) for exact prerequisites and adaptation points.
 
 Once installed, from a **local Mac terminal inside cmux**:
 
@@ -52,7 +52,9 @@ A running agent outside tmux is not captured by attaching tmux. Exit the origina
 | `workspace.py` | Mac Save/Open/list/link/add-terminal CLI using cmux's existing control API |
 | `remote.py` | SSH-only registry, revision checks, Caddy route generation, tmux attachment |
 | `server.py` | Authenticated layout and HTTP/WebSocket adapter in front of ttyd and local apps |
-| `static/` | Small split-tree renderer, upstream Split.js distribution and license |
+| `ide-extension/` | cmux layout integration using Microsoft Simple Browser and adapted Workspace Layout terminal code |
+| `install-ide.py` | Per-workspace code-server service and workspace configuration |
+| `static/` | Link entry and fallback ttyd page |
 | `cmux-relay.py` | Refresh connection metadata for supported cmux relay commands |
 | `install-server.py` | Private runtime state and systemd user service installation |
 | `cmux-diagnostic.py` | Read-only local cmux capability/layout diagnostics |

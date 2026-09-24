@@ -21,3 +21,9 @@
 14. Confirmed that Session Deck contributes no source or frontend dependency; retain its link only as research provenance. Live passwordless sharing passed in two isolated Chromium browser contexts.
 
 15. Compared complete frontend applications after feedback on the custom web page. Recorded source-level findings for code-server/VS Code, JupyterLab, Wave Terminal, and the archived Cloud9 SDK in FRONTEND-RESEARCH.md. Recommended evaluating code-server as a complete application; no replacement has been deployed.
+
+16. User selected a full browser IDE, preferring Zed if available. Checked Zed's supported platforms and remote-development model; no supported browser-hosted edition found. Installed code-server 4.138.0 on the VPS.
+17. After user steering, inspected existing Workspace Layout, Restore Terminals, Terminal Keeper, and Microsoft browser-preview implementations before continuing the integration. Adapted Workspace Layout's terminal code and reused Microsoft's preview view/assets with licenses.
+18. Enabled code-server behind the existing passwordless gateway and private Unix socket. Imported Outreach as three VS Code editor groups without restarting its tmux agent. Verified reload, resizing, two viewers, copied links, and unauthenticated rejection. Native cmux access remains available.
+
+19. User identified tmux padding dots in a larger IDE pane. Changed managed windows from smallest-client sizing to latest-active-client sizing. This uses tmux itself; terminal rendering remains VS Code. A shared PTY still has one size at a time.

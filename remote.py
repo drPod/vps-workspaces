@@ -181,7 +181,7 @@ def ensure(session, cwd=None):
         )
         run(*TMUX, "set-option", "-t", session, "status", "off")
         run(*TMUX, "set-option", "-t", session, "history-limit", "20000")
-        run(*TMUX, "set-window-option", "-t", session, "window-size", "smallest")
+    run(*TMUX, "set-window-option", "-t", session, "window-size", "latest")
     return session
 
 

@@ -4,7 +4,7 @@
 
 The VPS registry owns saved workspace definitions. Explicit Save captures the live `cmux tree` response, replaces Mac-specific surface identities with stable terminal/browser IDs, and writes a revisioned JSON document over SSH. Server-side writes are serialized and reject stale revisions. Open fetches the latest definition and uses an ordinary `cmux ssh` workspace plus native pane commands to rebuild the layout.
 
-A terminal belongs to a named session on the dedicated tmux server `tmux -L vps-workspaces`. Each terminal has its own session, rather than treating tmux's internal splits as cmux's layout. ttyd and native cmux attach to these same sessions. Closing a viewer disconnects a client, not the session. tmux uses the smallest attached client size, so narrower viewers can resize the common terminal.
+A terminal belongs to a named session on the dedicated tmux server `tmux -L vps-workspaces`. Each terminal has its own session, rather than treating tmux's internal splits as cmux's layout. code-server terminals, fallback ttyd, and native cmux attach to these same sessions. Closing a viewer disconnects a client, not the session. tmux uses the most recently active client size (`window-size latest`), so the terminal fits the viewer currently using it. Other viewers may see padding or clipping because a single shared terminal process has one size.
 
 The server does not start coding agents automatically. After a reboot, opening from the Mac recreates missing shells; the user resumes the desired agent conversation. Restarting the sharing service does not restart tmux.
 
@@ -27,3 +27,13 @@ Caddy terminates HTTPS and connects to an aiohttp Unix socket through an existin
 Link exchange requires a matching Origin and sets Secure/HttpOnly/SameSite cookies. WebSocket upgrades require an exact Origin match. Workspace credentials are stripped before proxying to apps. The web API has no shell-command, arbitrary upstream, workspace-write, or session-creation endpoint.
 
 This first version uses possession of the complete sharing link as access authorization; it does not provide individual accounts, read-only viewer roles, audit trails, or per-person revocation. Anyone with a workspace link can control its terminal as the shared Unix user. This is a trusted-collaborator tool, not tenant isolation. Installation-key rotation affects new HTTP connections; already-open WebSockets must be disconnected separately.
+
+## Browser IDE
+
+An enabled workspace has its own code-server systemd service, private Unix socket, user-data directory, and generated `.code-workspace` file. The existing gateway authenticates `/ide/` HTTP and WebSocket requests before forwarding to that socket. code-server has no public listener; its own password prompt and generic port proxy are disabled. The existing allowlisted app subdomains remain the preview destinations.
+
+The extension adapts Workspace Layout's terminal construction and directly reuses Microsoft's Simple Browser view and assets. The custom part translates cmux's binary split tree into VS Code editor groups and resolves saved surface identities. Microsoft preview tabs get distinct titles. Existing terminals are preserved, and no coding agent is launched.
+
+The IDE's layout is initially imported on window activation. Later VS Code rearrangements are viewer-local; native Save remains the publisher of the portable layout. Reload imports that saved layout again. The browser is a separate view of the same tmux processes and app URLs, not an embedded instance of the native cmux UI.
+
+code-server retains disconnected clients for a 60-second reconnection grace period; a newly attached viewer can temporarily become the most recently active size until another viewer interacts. The adapter detaches only its own recorded tmux client PIDs when its extension host deactivates. After that the browser can reconnect by opening a fresh view onto the still-running tmux session.

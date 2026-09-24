@@ -25,3 +25,9 @@ cmux source checkout: `be3855bb2d06c7ede52b01de2200f94be1ce1a68`. Installed app 
 - [aiohttp](https://docs.aiohttp.org/en/stable/): HTTP/WebSocket transport library, installed as a dependency.
 
 No cmux, Session Deck, or PR source files are copied into this repository. Their API contracts and architectural patterns informed the adapter. We reuse ttyd/Caddy as programs, aiohttp as a dependency, and the unmodified Split.js distribution with its license.
+
+## Reused IDE extension code
+
+The browser IDE integration reuses [Microsoft VS Code Simple Browser](https://github.com/microsoft/vscode/tree/97452d795c704de960ead42638244f1e104319c7/extensions/simple-browser) and adapts terminal handling from [Workspace Layout](https://github.com/lostintangent/workspace-layout/tree/5ea20e7cd19e57bb000ceaf80237d63ac7b6034a). Both licenses, exact references, and modifications are recorded in [the extension notice](../ide-extension/NOTICE.md). VS Code provides the complete workbench; this project does not implement its terminal renderer, tabs, splitters, editor, or preview HTML.
+
+Workspace Layout was not installed unchanged: its source disposes all existing terminals during reset, supports one browser URL, and does not import cmux's split tree. Our adaptation preserves existing terminals. Terminal Keeper and Restore Terminals were also considered for terminal initialization, but do not by themselves import the mixed terminal/browser layout.

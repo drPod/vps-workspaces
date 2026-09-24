@@ -1,0 +1,36 @@
+{
+  "name": "vps-workspaces",
+  "displayName": "VPS Workspaces",
+  "publisher": "drpod",
+  "version": "0.1.0",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.95.0"
+  },
+  "main": "./dist/extension.js",
+  "extensionKind": [
+    "workspace"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "vpsWorkspaces.open",
+        "title": "VPS Workspaces: Open Saved cmux Layout"
+      },
+      {
+        "command": "vpsWorkspaces.share",
+        "title": "VPS Workspaces: Copy Sharing Link"
+      }
+    ]
+  },
+  "scripts": {
+    "build": "esbuild extension.ts --bundle --platform=node --external:vscode --outfile=dist/extension.js",
+    "test": "node --test layout.test.cjs"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.10"
+  }
+}

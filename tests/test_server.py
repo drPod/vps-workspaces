@@ -49,6 +49,8 @@ class AccessTests(unittest.IsolatedAsyncioTestCase):
             "/terminal/shell/",
             "/terminal/shell/ws",
             "/share-link",
+            "/ide/",
+            "/ide/stable-example",
         ):
             r = await self.client.get(
                 path, headers={"Host": "demo.example.test"}, allow_redirects=False
@@ -121,6 +123,27 @@ class AccessTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(r.status, 404)
         r = await self.client.get("/terminal/other/", headers=self.headers())
         self.assertEqual(r.status, 404)
+
+    async def test_ide_routes_require_installation_and_open_configured_workspace(self):
+        r = await self.client.get(
+            "/ide/", headers=self.headers(), allow_redirects=False
+        )
+        self.assertEqual(r.status, 404)
+        (self.root / "demo.ide").write_text(
+            json.dumps(
+                {
+                    "workspace": "/private/demo.code-workspace",
+                    "socket": "/private/ide.sock",
+                }
+            )
+        )
+        r = await self.client.get(
+            "/ide/", headers=self.headers(), allow_redirects=False
+        )
+        self.assertEqual(r.status, 302)
+        self.assertEqual(
+            r.headers["Location"], "/ide/?workspace=/private/demo.code-workspace"
+        )
 
     async def test_cross_origin_websocket_is_rejected(self):
         # Validate before reaching ttyd; a fake client proves no upstream request.

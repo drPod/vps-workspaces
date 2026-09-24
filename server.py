@@ -8,7 +8,7 @@ import json
 import os
 import pathlib
 import time
-from urllib.parse import urlsplit, urlunsplit
+from urllib.parse import urlsplit, urlunsplit, urlencode
 from aiohttp import (
     web,
     ClientSession,
@@ -95,6 +95,7 @@ async def startup(app):
         timeout=ClientTimeout(total=None, sock_connect=10),
     )
     app["ttyd"] = {}
+    app["ide_clients"] = {}
     app["terminal_lock"] = asyncio.Lock()
 
 
@@ -103,6 +104,8 @@ async def cleanup(app):
         if p.returncode is None:
             p.terminate()
         await p.wait()
+        await client.close()
+    for client in app["ide_clients"].values():
         await client.close()
     await app["http"].close()
 
@@ -155,7 +158,7 @@ async def terminal(app, session):
         return client
 
 
-async def proxy(req, client, target, doc, terminal_view=False):
+async def proxy(req, client, target, doc, terminal_view=False, prefix=""):
     headers = {
         k: v
         for k, v in req.headers.items()
@@ -172,8 +175,11 @@ async def proxy(req, client, target, doc, terminal_view=False):
     }
     # Keep app cookies, but never pass the workspace access credential upstream.
     cookies = {k: v for k, v in req.cookies.items() if k != COOKIE}
+    if prefix:
+        headers["X-Forwarded-Host"] = req.host
+        headers["X-Forwarded-Proto"] = "https"
     if req.headers.get("Origin"):
-        headers["Origin"] = origin(target)
+        headers["Origin"] = req.headers["Origin"] if prefix else origin(target)
     if req.headers.get("Upgrade", "").lower() == "websocket":
         if req.headers.get("Origin") != "https://" + req.host:
             raise web.HTTPForbidden(text="Origin mismatch")
@@ -236,7 +242,14 @@ async def proxy(req, client, target, doc, terminal_view=False):
             if key.lower() in HOP or key.lower() == "set-cookie":
                 continue
             if key.lower() == "location" and value.startswith(origin(target) + "/"):
-                value = "https://" + req.host + value[len(origin(target)) :]
+                value = "https://" + req.host + prefix + value[len(origin(target)) :]
+            elif (
+                key.lower() == "location"
+                and prefix
+                and value.startswith("/")
+                and not value.startswith("//")
+            ):
+                value = prefix + value
             result.headers.add(key, value)
         # Preserve host-only app cookies on the dedicated app subdomain.
         for value in upstream.headers.getall("Set-Cookie", []):
@@ -269,7 +282,11 @@ async def handle(req):
         ):
             raise web.HTTPUnauthorized(text="This sharing link is not valid.")
         response = web.json_response(
-            {"ok": True}, headers={"Cache-Control": "no-store"}
+            {
+                "ok": True,
+                "next": "/ide/" if (ROOT / (doc["id"] + ".ide")).exists() else "/",
+            },
+            headers={"Cache-Control": "no-store"},
         )
         response.set_cookie(
             COOKIE,
@@ -297,6 +314,28 @@ async def handle(req):
         return await proxy(
             req, req.app["http"], origin(browser["url"]) + req.rel_url.raw_path_qs, doc
         )
+    ide_path = ROOT / (doc["id"] + ".ide")
+    if req.path == "/ide":
+        raise web.HTTPFound("/ide/")
+    if req.path.startswith("/ide/"):
+        if not ide_path.exists():
+            raise web.HTTPNotFound(text="IDE is not installed for this workspace")
+        config = json.loads(ide_path.read_text())
+        if req.path == "/ide/" and not req.query_string:
+            raise web.HTTPFound(
+                "/ide/?" + urlencode({"workspace": config["workspace"]})
+            )
+        if doc["id"] not in req.app["ide_clients"]:
+            req.app["ide_clients"][doc["id"]] = ClientSession(
+                connector=UnixConnector(path=config["socket"]),
+                cookie_jar=DummyCookieJar(),
+                auto_decompress=False,
+                timeout=ClientTimeout(total=None, sock_connect=10),
+            )
+        target = "http://localhost/" + req.rel_url.raw_path_qs[len("/ide/") :]
+        return await proxy(
+            req, req.app["ide_clients"][doc["id"]], target, doc, prefix="/ide"
+        )
     if req.path.startswith("/terminal/"):
         parts = req.path.split("/", 3)
         if len(parts) < 4:
@@ -318,8 +357,12 @@ async def handle(req):
         return web.json_response(
             {"url": share_url(access, doc)}, headers={"Cache-Control": "no-store"}
         )
+    if req.path == "/" and ide_path.exists():
+        return entry_page()
     if req.path == "/workspace.json":
         public = json.loads(json.dumps(doc))
+        if ide_path.exists():
+            public["ide_url"] = "/ide/"
         for s in surfaces(public["layout"]):
             if s["type"] == "terminal":
                 s["web_url"] = "/terminal/" + s["id"] + "/"
@@ -333,6 +376,7 @@ async def handle(req):
         return web.json_response(public, headers={"Cache-Control": "no-store"})
     files = {
         "/": "index.html",
+        "/classic/": "index.html",
         "/app.js": "app.js",
         "/style.css": "style.css",
         "/split.min.js": "split.min.js",

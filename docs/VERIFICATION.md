@@ -9,7 +9,7 @@
 - Keyboard input from the web terminal appeared in the same named tmux session used by native cmux.
 - No browser page errors in that smoke test.
 - Passwordless link entry, copying the full link, a second isolated viewer, and rejection of an invalid cookie passed a live Chromium check.
-- Twelve automated tests cover authentication, validation, terminal reservation, and failed-publication recovery.
+- Fourteen Python tests and four extension layout/URL tests cover authentication, validation, terminal reservation, and failed-publication recovery.
 - Native Save/Open reconstructed a second client workspace with the same split tree and two URLs (revision 2).
 - The original agent was stopped normally and resumed inside the managed tmux terminal. Verified a single Codex conversation process with native/web access to its session.
 
@@ -38,3 +38,11 @@ python3 -m unittest discover -s tests -v
 ```
 
 Run `verify-native.py` in a local cmux terminal after opening the initial Outreach workspace. It performs Save/Open and checks topology and URLs without closing existing workspaces. Private results are written outside the repository.
+
+## code-server integration verification
+
+Code-server 4.138.0 / Code 1.138.0 was exercised in real Chromium at 1600×1000, 1440×900, and 1280×850. The same Outreach agent was visible beside two loaded app previews in three editor groups. Reload restored exactly three tabs. Two isolated browsers joined through the same passwordless link; closing one left the other working. Copy Sharing Link produced the original capability URL. Requests to `/ide/` without the workspace cookie returned 401. No page JavaScript errors were observed.
+
+Screenshots were inspected locally and are not published because they contain workspace content. The pinned code-server build requests two missing optional `vsda` browser assets (404); the terminal, extension host, editor workbench, and previews still connected successfully. Native cmux's terminal process was not restarted. Actual terminal input in the live agent was intentionally not injected during the IDE smoke test.
+
+Not yet exercised: IDE file-editing collaboration/conflict handling, arbitrary third-party extensions, two different physical Macs, or bidirectional synchronization of IDE layout changes back into cmux.

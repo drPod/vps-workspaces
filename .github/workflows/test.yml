@@ -10,3 +10,11 @@ jobs:
           python-version: '3.12'
       - run: pip install -r requirements.txt
       - run: python -m unittest discover -s tests -v
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --ignore-scripts
+        working-directory: ide-extension
+      - run: npm test && npm run build
+        working-directory: ide-extension
+      - run: git diff --exit-code -- ide-extension/dist

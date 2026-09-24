@@ -25,6 +25,25 @@ class RegistryTests(unittest.TestCase):
         p.start()
         self.addCleanup(p.stop)
 
+    def test_existing_session_receives_latest_client_sizing(self):
+        from types import SimpleNamespace
+
+        with (
+            patch.object(
+                remote.subprocess, "run", return_value=SimpleNamespace(returncode=0)
+            ),
+            patch.object(remote, "run") as run,
+        ):
+            remote.ensure("demo-agent")
+        run.assert_called_once_with(
+            *remote.TMUX,
+            "set-window-option",
+            "-t",
+            "demo-agent",
+            "window-size",
+            "latest",
+        )
+
     def test_prepare_is_unpublished_and_retryable(self):
         with patch.object(remote, "ensure"):
             first = remote.prepare_terminal("demo", "review", 1)
