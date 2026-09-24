@@ -21,7 +21,7 @@ On initial verification, `Coding/gradient-hackathon/data/swarmci.db` already fai
 
 ## Setup and status
 
-Install rsnapshot with your package manager, then:
+Install rsnapshot with your package manager. On this Mac, Homebrew Python 3.14 is used because the system Python SQLite library could not read two newer Codex databases correctly. The installer selects `python3.14` when available. Then:
 
 ```sh
 # VPS, from deployed repository:

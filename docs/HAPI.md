@@ -36,7 +36,7 @@ Then reopen the saved workspace on the Mac or reload code-server. Binding refuse
 
 ## Existing conversations
 
-HAPI cannot hot-migrate a legacy Codex process. Exit the old agent normally first. From its VPS shell, run:
+HAPI cannot hot-migrate a legacy Codex process. Exit the old agent normally first. From a separate VPS shell (or through SSH from the Mac), run:
 
 ```sh
 python3 ~/.local/share/vps-workspaces/app/hapi-workspace.py migrate demo agent NATIVE_CODEX_THREAD_ID
