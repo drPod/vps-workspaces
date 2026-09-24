@@ -67,3 +67,10 @@ Existing Mac panes need refreshing; adding the analytics pane requires loading t
 - Resolved a title-only registry conflict by comparing baseline layout fingerprints, backing up bindings and advancing only metadata. Observed native autosave save the user's two-browser-tab pane automatically.
 - Verified an actual browser session opens the IDE, correct tab groups, report and Post Studio with no page errors. The replacement Mac autosave worker is running and watching all three open managed workspaces. Native palette click/clipboard confirmation remains pending.
 - Added contributor/agent instructions and a private installation runbook outside Git. Mutagen synchronization is documented explicitly; the source and installed app remain separate.
+
+### Palette label correction
+
+The user confirmed the browser-link action works, but reported two identically named commands.
+Installed cmux source confirms its own Copy Workspace Link command copies a native navigation
+link. Renamed this integration's action to **Copy Browser Workspace Link**; its action ID and
+behavior are unchanged. The native command remains available.

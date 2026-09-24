@@ -18,7 +18,7 @@ Codex session; cmux and code-server supply the interfaces.
 - **Automatic layout saves.** Split proportions, tabs, URLs and session bindings persist;
   conflicting edits pause with a recovery draft.
 - **A stable workspace link.** Create a managed workspace and retrieve its link from the CLI
-  or cmux's **Copy Workspace Link** action.
+  or cmux's **Copy Browser Workspace Link** action.
 - **Versioned backups.** rsnapshot handles retention; SQLite's backup API prepares consistent
   database copies. Mac and VPS snapshots are unencrypted.
 

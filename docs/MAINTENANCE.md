@@ -41,7 +41,7 @@ with `workspace.py hapi bind NAME SURFACE SESSION`; do not repeatedly create age
 Install native palette actions with `python3 workspace.py install cmux` on the Mac:
 
 - **New VPS Workspace** asks for a name and creates a managed workspace.
-- **Copy Workspace Link** copies the current managed workspace's link. cmux's native action
+- **Copy Browser Workspace Link** copies the current managed workspace's link. cmux's native action
   opens a short-lived terminal tab; the command copies through macOS or native OSC 52 clipboard
   handling and closes only that helper tab. It never types a command into an agent prompt.
 

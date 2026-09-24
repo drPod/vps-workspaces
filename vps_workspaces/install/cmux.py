@@ -29,7 +29,7 @@ def main() -> None:
     actions = {
         "vps-copy-link": {
             "type": "command",
-            "title": "Copy Workspace Link",
+            "title": "Copy Browser Workspace Link",
             "subtitle": "Copy this VPS workspace’s browser link",
             "command": copy_command,
             "target": "newTabInCurrentPane",
@@ -61,7 +61,7 @@ def main() -> None:
     for key, action in actions.items():
         subprocess.run([*editor, "set", "actions." + key, json.dumps(action)], env=env, check=True)
     subprocess.run([*editor, "validate"], env=env, check=True)
-    print("Installed: Copy Workspace Link; New VPS Workspace")
+    print("Installed: Copy Browser Workspace Link; New VPS Workspace")
     result = subprocess.run([CLI, "reload-config"], check=False, capture_output=True, text=True)
     if result.returncode:
         print("Press Cmd+Shift+, inside cmux to reload its configuration.")

@@ -79,8 +79,9 @@ no page errors. Every HAPI engine kept its pre-deployment PID. Native autosave r
 from a verified metadata-only revision conflict and saved the combined browser pane.
 
 The Mac palette configuration validates and is installed. The replacement Mac autosave worker is running and watching the open managed workspaces.
-Actual palette click/copy still needs user confirmation from a local cmux shell because
-SSH descendants are denied by the user's existing cmux policy. That check is not claimed complete.
+The user confirmed the browser-link action copied successfully from local cmux. A naming
+collision with cmux's built-in native-link action was corrected by renaming this action to
+Copy Browser Workspace Link. Reload/restart cmux to load the distinct label.
 
 
 A newly created disposable workspace provisioned its IDE and HAPI session successfully.
