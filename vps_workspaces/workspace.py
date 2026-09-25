@@ -11,7 +11,9 @@ import shlex
 import subprocess
 import sys
 import time
+from collections import Counter
 from typing import Any
+from uuid import NAMESPACE_URL, uuid5
 
 from vps_workspaces.contracts import Instance, JsonObject, Layout, Surface, Workspace
 from vps_workspaces.model import checked_id, surfaces, validate
@@ -243,24 +245,26 @@ def snapshot_workspace(name: str, state: Instance, current: JsonObject) -> Works
     known = {s["id"]: s for s in surfaces(doc["layout"])}
     known.update(state.get("pending_surfaces", {}))
     panes = {p["id"]: p for p in current["panes"]}
-    unbound = [
+    live = [s for p in current["panes"] for s in p["surfaces"] if s.get("title") != "VPS Workspaces · Link"]
+    counts = Counter(state["bindings"].get(s["id"]) for s in live)
+    resolved = {s["id"]: known[state["bindings"][s["id"]]] for s in live if state["bindings"].get(s["id"]) in known}
+    refresh = [
         s
-        for p in current["panes"]
-        for s in p["surfaces"]
-        if s["type"] == "terminal"
-        and s.get("title") != "VPS Workspaces · Link"
-        and state["bindings"].get(s["id"]) not in known
+        for s in live
+        if s["type"] == "terminal" and (s["id"] not in resolved or counts[state["bindings"].get(s["id"])] > 1)
     ]
-    if unbound:
+    if refresh:
         from vps_workspaces.persistence import discover
 
         discovered = discover(name, current)
-        for s in unbound:
+        for s in refresh:
             if s["id"] in discovered:
-                agent = discovered[s["id"]]
-                known[agent["id"]] = agent
-                state["bindings"][s["id"]] = agent["id"]
-                state.setdefault("pending_surfaces", {})[agent["id"]] = agent
+                resolved[s["id"]] = discovered[s["id"]]
+            elif s["id"] in resolved:
+                raise ValueError(
+                    "Cannot identify terminals with duplicate bindings; waiting for live session discovery"
+                )
+    used: set[str] = set()
 
     def convert(n: JsonObject) -> Layout:
         if "pane" not in n:
@@ -276,7 +280,7 @@ def snapshot_workspace(name: str, state: Instance, current: JsonObject) -> Works
         for i, s in enumerate(visible):
             if s["type"] not in ("terminal", "browser"):
                 raise ValueError("Only terminal and browser panes can be saved")
-            old = known.get(state["bindings"].get(s["id"], ""))
+            old = resolved.get(s["id"])
             if s["type"] == "terminal" and old is None:
                 raise ValueError(
                     "Unmanaged terminal: use `workspace.py add-terminal "
@@ -284,6 +288,11 @@ def snapshot_workspace(name: str, state: Instance, current: JsonObject) -> Works
                     + " <name>` to create a persistent shared terminal first."
                 )
             item: Surface = copy.copy(old) if old else {"id": "browser-" + s["id"].lower()[:8], "type": "browser"}
+            if item["id"] in used:
+                item["id"] = "view-" + uuid5(NAMESPACE_URL, state["workspace"] + "/" + s["id"]).hex
+            used.add(item["id"])
+            if s["type"] == "terminal":
+                state.setdefault("pending_surfaces", {})[item["id"]] = copy.copy(item)
             item["title"] = s["title"]
             if s["type"] == "browser":
                 item["url"] = s.get("url") or (old.get("url") if old else None) or "about:blank"

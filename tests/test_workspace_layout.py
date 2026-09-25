@@ -101,3 +101,68 @@ class LayoutTests(unittest.TestCase):
         self.assertEqual(
             [s["url"] for s in result["layout"]["pane"]["surfaces"]], ["https://example.com", "about:blank"]
         )
+
+    def duplicate_fixture(self, bound=True):
+        agent = {
+            "id": "saved-agent",
+            "type": "terminal",
+            "session": "original-shell",
+            "codex_thread": "01a0d987-7d17-7c30-ad23-8fd90a9a74b7",
+        }
+        state = {
+            "workspace": "native",
+            "revision": 3,
+            "bindings": {"old": agent["id"], **({"new": agent["id"]} if bound else {})},
+            "doc": {"id": "demo", "name": "Demo", "layout": {"pane": {"surfaces": [agent]}}},
+        }
+        tree = {
+            "title": "Demo",
+            "layout": {"pane": {"id": "p"}},
+            "panes": [
+                {
+                    "id": "p",
+                    "selected_surface_id": "new",
+                    "surfaces": [
+                        {"id": "old", "type": "terminal", "title": "Old"},
+                        {"id": "new", "type": "terminal", "title": "New"},
+                    ],
+                }
+            ],
+        }
+        return agent, state, tree
+
+    def test_two_viewers_of_one_thread_have_distinct_stable_layout_ids(self):
+        from vps_workspaces.model import validate
+
+        for bound in (True, False):
+            with self.subTest(bound=bound):
+                agent, state, tree = self.duplicate_fixture(bound)
+                with patch("vps_workspaces.persistence.discover", return_value={"old": agent, "new": agent}):
+                    doc = validate(snapshot_workspace("demo", state, tree))
+                tabs = doc["layout"]["pane"]["surfaces"]
+                self.assertNotEqual(tabs[0]["id"], tabs[1]["id"])
+                self.assertEqual(tabs[0]["codex_thread"], tabs[1]["codex_thread"])
+                self.assertEqual(doc["layout"]["pane"]["selected"], 1)
+                with patch("vps_workspaces.persistence.discover") as discover:
+                    self.assertEqual(snapshot_workspace("demo", state, tree), doc)
+                    discover.assert_not_called()
+
+    def test_duplicate_binding_rediscovers_shell_after_agent_moved(self):
+        from vps_workspaces.model import validate
+
+        agent, state, tree = self.duplicate_fixture()
+        shell = {"id": "saved-agent", "type": "terminal", "session": "original-shell"}
+        with patch("vps_workspaces.persistence.discover", return_value={"old": shell, "new": agent}):
+            doc = validate(snapshot_workspace("demo", state, tree))
+        tabs = doc["layout"]["pane"]["surfaces"]
+        self.assertNotIn("codex_thread", tabs[0])
+        self.assertEqual(tabs[0]["session"], "original-shell")
+        self.assertEqual(tabs[1]["codex_thread"], agent["codex_thread"])
+
+    def test_ambiguous_duplicate_does_not_guess_or_drop_a_terminal(self):
+        agent, state, tree = self.duplicate_fixture()
+        with (
+            patch("vps_workspaces.persistence.discover", return_value={"new": agent}),
+            self.assertRaisesRegex(ValueError, "Cannot identify terminals"),
+        ):
+            snapshot_workspace("demo", state, tree)
