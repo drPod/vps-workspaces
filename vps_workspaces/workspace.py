@@ -147,7 +147,7 @@ def open_workspace(name: str) -> str:
 
         selected = node["pane"].get("selected", 0)
         selected_id = next(sid for sid, label in bindings.items() if label == node["pane"]["surfaces"][selected]["id"])
-        cmux("focus-panel", "--workspace", ws, "--surface", selected_id)
+        cmux("focus-panel", "--workspace", ws, "--panel", selected_id)
 
     def walk(node: Layout, pane: str, surface: str) -> None:
         if "pane" in node:
