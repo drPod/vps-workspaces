@@ -138,3 +138,27 @@ class AutosaveTests(unittest.TestCase):
                 autosave.tick(debounce, errors, 14)
                 autosave.tick(debounce, errors, 15)
                 notify.assert_called_once()
+
+    def test_timeout_retries_then_notifies_once_and_recovers(self):
+        with tempfile.TemporaryDirectory() as tmp, patch.object(workspace, "STATE", Path(tmp)):
+            doc = {"layout": {"pane": {"surfaces": []}}}
+            workspace.store("demo", {"workspace": "one", "bindings": {}, "revision": 1, "doc": doc})
+            with (
+                patch.object(workspace, "cmux", return_value={"windows": [{"workspaces": [{"id": "one"}]}]}),
+                patch.object(workspace, "snapshot_workspace", return_value=dict(doc, name="changed")),
+                patch.object(workspace, "save_state", side_effect=RuntimeError("<urlopen error timed out>")) as save,
+                patch.object(autosave, "notify") as notify,
+            ):
+                debounce, errors = autosave.Debounce(), {}
+                for now in (0, 3, 30, 62):
+                    autosave.tick(debounce, errors, now)
+                notify.assert_not_called()
+                status = json.loads((Path(tmp) / "autosave-status.json").read_text())
+                self.assertEqual(status["instances"]["one"]["state"], "retrying")
+                autosave.tick(debounce, errors, 63)
+                autosave.tick(debounce, errors, 64)
+                notify.assert_called_once()
+                save.side_effect = None
+                autosave.tick(debounce, errors, 65)
+                self.assertEqual(debounce.unsettled, {})
+                self.assertEqual(errors, {})

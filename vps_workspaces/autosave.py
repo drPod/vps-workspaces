@@ -90,12 +90,8 @@ def tick(debounce: Debounce, errors: dict[str, tuple[int, str, bool]], now: floa
                         "A saved terminal is detached or closed. Its saved binding was preserved; "
                         "reconnect it, or use an explicit workspace save to confirm removal."
                     )
-                debounce.unsettled.pop(wid, None)
                 value = fingerprint(doc)
                 baseline = fingerprint(state["doc"])
-                if wid in errors and not errors[wid][2]:
-                    errors.pop(wid)
-
                 if wid in errors and errors[wid][0] == state["revision"] and errors[wid][2]:
                     status[wid].update(state="paused", error=errors[wid][1])
                     continue
@@ -104,6 +100,8 @@ def tick(debounce: Debounce, errors: dict[str, tuple[int, str, bool]], now: floa
                     debounce.pending.pop(wid, None)
                     errors.pop(wid, None)
                     status[wid].update(state="saved", revision=candidate["revision"])
+                debounce.unsettled.pop(wid, None)
+                errors.pop(wid, None)
             except (ValueError, RuntimeError) as error:
                 message = str(error)
                 drafts = ws.STATE / "autosave-drafts"
@@ -111,12 +109,15 @@ def tick(debounce: Debounce, errors: dict[str, tuple[int, str, bool]], now: floa
                 ws.atomic_state(drafts / p.name, {"state": state, "native_tree": trees[wid], "error": message})
                 status[wid].update(state="paused", error=message)
 
-                if message.startswith("Unmanaged terminal:"):
+                retrying = "timed out" in message.lower() or "connection refused" in message.lower()
+                if retrying:
+                    status[wid]["state"] = "retrying"
+                if retrying or message.startswith("Unmanaged terminal:"):
                     previous, since = debounce.unsettled.setdefault(wid, (message, now))
                     if previous != message:
                         debounce.unsettled[wid] = (message, now)
                         since = now
-                    if now - since < 10:
+                    if now - since < (60 if retrying else 10):
                         continue
                 conflict = "Workspace changed on another Mac" in message
                 if errors.get(wid, (None, None))[1] != message:
@@ -144,7 +145,7 @@ def main() -> None:
             errors = {
                 wid: (s["revision"], s["error"], "Workspace changed on another Mac" in s["error"])
                 for wid, s in previous.items()
-                if s.get("state") == "paused" and s.get("error")
+                if s.get("state") in ("paused", "retrying") and s.get("error")
             }
         while True:
             try:

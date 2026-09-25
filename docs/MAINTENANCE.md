@@ -86,7 +86,8 @@ part of layout autosave. The backup configuration is authoritative for snapshot 
 Autosave discovers new VPS HAPI Codex terminals from their live process ancestry and session
 metadata; it binds the existing conversation without spawning another agent. Plain unmanaged
 shells still require `add-terminal`. Temporary unmanaged terminals get ten seconds to close
-before a desktop alert; no incomplete layout is saved during that grace period. An unchanged save error is not notified again after an
+before a desktop alert; no incomplete layout is saved during that grace period. Connection
+timeouts retry automatically and alert only after a minute of continuous failure. An unchanged save error is not notified again after an
 autosave worker restart. If a saved terminal disappears, autosave preserves its binding and
 writes a recovery draft instead of saving a browser-only replacement. Reattach the terminal;
 if its removal was intentional, an explicit `workspace.py save NAME` confirms that removal.
