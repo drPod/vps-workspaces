@@ -1,0 +1,11 @@
+[Unit]
+Description=Resource budget for explicitly isolated agent jobs
+
+[Slice]
+MemoryAccounting=yes
+MemoryHigh=1G
+MemoryMax=1536M
+CPUAccounting=yes
+CPUWeight=20
+CPUQuota=150%
+TasksMax=256

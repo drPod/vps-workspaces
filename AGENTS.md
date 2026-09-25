@@ -97,3 +97,9 @@ Read [docs/RESOURCE-LIMITS.md](docs/RESOURCE-LIMITS.md). Launch memory/CPU-heavy
 in a separate systemd unit under `agent-jobs.slice` with a per-job memory cap; do not run them
 unbounded inside HAPI. Docker daemon/container work requires its own limits. Keep the interactive
 agent and SSH outside the job slice. Do not assume these limits catch arbitrary shell commands.
+
+Codex Bash tool commands can use the [AgentCgroup adapter](docs/AGENTCGROUP.md).
+`install resources` installs it without restarting agents. Preserve its upstream license
+and attribution. It does not cap Docker/remote daemons or non-Bash execution; check the
+actual cgroup before claiming a job is protected. Never stop the delegated tool service
+while jobs are running merely to refresh configuration.

@@ -15,6 +15,7 @@ COMMANDS = {
     "verify-native": "verify",
 }
 INSTALLERS = {
+    "resources": "resources",
     "server": "server",
     "ide": "ide",
     "hapi": "hapi",

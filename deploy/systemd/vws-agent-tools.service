@@ -1,0 +1,14 @@
+[Unit]
+Description=Delegated tool-call cgroups (AgentCgroup adapter)
+
+[Service]
+Type=exec
+Slice=agent-jobs.slice
+ExecStart=/bin/sleep infinity
+ExecStartPost=/bin/bash -c 'read -r line < /proc/self/cgroup; root=$${line#0::}; printf "+cpu +memory +pids" > "/sys/fs/cgroup$${root%%/*}/cgroup.subtree_control"'
+Delegate=cpu memory pids
+DelegateSubgroup=supervisor
+Restart=on-failure
+
+[Install]
+WantedBy=default.target

@@ -1,5 +1,9 @@
 # Keeping agent jobs from starving the VPS
 
+New Codex sessions can now use the [automatic AgentCgroup adapter](AGENTCGROUP.md).
+It separates Bash tool calls from their supervising agent without replacing host Bash.
+The commands below remain useful for explicit jobs and execution outside that adapter.
+
 The September 24 freeze was a host-wide OOM event: an unbounded Python guide parse used about
 3.3 GiB alongside existing services. It ran inside the HAPI agent's service cgroup. The kernel
 killed that Python child; the interactive session slowed during memory reclaim. Jellyfin was

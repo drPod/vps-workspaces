@@ -121,3 +121,11 @@ npm test
 The extension's deployment bundle is committed. `npm test` checks types and formatting,
 rebuilds it, and runs the layout tests. CI checks that the committed bundle matches its source.
 For changes affecting running workspaces, follow the [deployment checklist](docs/MAINTENANCE.md#update-or-roll-back).
+
+### Tool resource isolation
+
+The optional [AgentCgroup adapter](docs/AGENTCGROUP.md) automatically places Codex Bash
+tool commands in separately limited cgroups. It reuses and attributes
+[eunomia-bpf/agentcgroup](https://github.com/eunomia-bpf/agentcgroup); upstream source and
+GPL-2.0 notices are preserved. The deployed adapter uses standard cgroup v2, not the
+experimental eBPF scheduler or patched-kernel memory controller.
