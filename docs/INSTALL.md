@@ -72,6 +72,12 @@ settings. Client checks detect a lost server; the server checks above reclaim
 abandoned reverse ports. Neither replaces the other. The `install mac-access`
 tunnel already specifies its own liveness checks and disables multiplexing.
 
+Leave `ControlMaster`, `ControlPath`, and `ControlPersist` unset on the cmux host
+alias so cmux can manage and recover its own shared connection. If administrative
+SSH uses multiplexing, give its separate alias a different `ControlPath`.
+cmux deliberately does not reap user-managed sockets. Existing workspaces may
+retain their saved options; do not interrupt them just to apply this change.
+
 From a **local** terminal in cmux, in this repository:
 
 ```sh
