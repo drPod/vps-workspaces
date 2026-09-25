@@ -58,6 +58,10 @@ def validate(doc: Workspace) -> Workspace:
                 seen.add(s["id"])
                 if s["type"] == "terminal":
                     checked_id(s["session"])
+                    if "codex_thread" in s:
+                        from vps_workspaces.codex import checked_thread
+
+                        checked_thread(s["codex_thread"])
                     if "hapi_session" in s:
                         from vps_workspaces.hapi_bridge import checked_session
 

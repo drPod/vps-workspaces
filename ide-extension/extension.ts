@@ -16,7 +16,7 @@ const name = process.env.VWS_WORKSPACE;
 const previews: SimpleBrowserView[] = [];
 const ownedClients = new Map<number, { session: string; start: string }>();
 let stopped = false;
-const ownedHapi = new Map<number, string>();
+const ownedCodex = new Map<number, string>();
 function processStart(pid: number): string | undefined {
   try {
     return fs
@@ -30,7 +30,7 @@ function processStart(pid: number): string | undefined {
 // Disconnect this viewer's PTYs without stopping the shared agent.
 export function deactivate() {
   stopped = true;
-  for (const [pid, start] of ownedHapi) {
+  for (const [pid, start] of ownedCodex) {
     if (processStart(pid) === start) {
       try {
         process.kill(pid, "SIGHUP");
@@ -39,7 +39,7 @@ export function deactivate() {
       }
     }
   }
-  ownedHapi.clear();
+  ownedCodex.clear();
   if (!ownedClients.size) return;
   try {
     const lines = execFileSync(
@@ -150,7 +150,8 @@ export async function activate(context: vscode.ExtensionContext) {
                 }
                 const start = processStart(pid);
                 if (!start) return;
-                if (surface.hapi_session) ownedHapi.set(pid, start);
+                if (surface.codex_thread || surface.hapi_session)
+                  ownedCodex.set(pid, start);
                 else ownedClients.set(pid, { session: surface.session, start });
               });
             }
@@ -177,32 +178,6 @@ export async function activate(context: vscode.ExtensionContext) {
     output.appendLine(
       `Opened ${doc.id} revision ${doc.revision}: ${panes(doc.layout).length} panes`,
     );
-  }
-  context.subscriptions.push(
-    vscode.commands.registerCommand("vpsWorkspaces.hapi", async () => {
-      try {
-        const { stdout } = await execute(
-          "/usr/bin/python3",
-          [path.join(root, "app/workspace.py"), "hapi", "link"],
-          { encoding: "utf8", timeout: 5000 },
-        );
-        const url = stdout.trim();
-        await vscode.env.openExternal(vscode.Uri.parse(url));
-      } catch (error) {
-        report(error);
-      }
-    }),
-  );
-  if (fs.existsSync(path.join(root, "hapi/install.json"))) {
-    const status = vscode.window.createStatusBarItem(
-      vscode.StatusBarAlignment.Left,
-      90,
-    );
-    status.text = "$(comment-discussion) HAPI Sessions";
-    status.command = "vpsWorkspaces.hapi";
-    status.tooltip = "Open the HAPI session app";
-    status.show();
-    context.subscriptions.push(status);
   }
   context.subscriptions.push(
     vscode.commands.registerCommand("vpsWorkspaces.open", () =>

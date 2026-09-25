@@ -21,6 +21,8 @@ def inspect_vps() -> dict[str, Any]:
     result: dict[str, Any] = {
         "role": "vps",
         "gateway": service_active("vps-workspaces.service"),
+        "codex_daemon": (Path.home() / ".codex/app-server-control/app-server-control.sock").is_socket(),
+        "tool_isolation": service_active("vws-agent-tools.service"),
         "workspaces": [],
     }
     for doc in registry.documents():
@@ -31,6 +33,7 @@ def inspect_vps() -> dict[str, Any]:
                 "revision": doc.get("revision"),
                 "ide": service_active("vps-ide-" + doc["id"] + ".service") and socket.is_socket(),
                 "hapi_terminals": sum(bool(s.get("hapi_session")) for s in surfaces(doc["layout"])),
+                "codex_terminals": sum(bool(s.get("codex_thread")) for s in surfaces(doc["layout"])),
                 "browsers": [s["url"] for s in surfaces(doc["layout"]) if s["type"] == "browser"],
             }
         )

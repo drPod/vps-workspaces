@@ -8,6 +8,7 @@ export const surfaceSchema = z.discriminatedUnion("type", [
     type: z.literal("terminal"),
     session: identifier,
     cwd: z.string().optional(),
+    codex_thread: z.uuid().optional(),
     hapi_session: z.uuid().optional(),
   }),
   surfaceBase.extend({

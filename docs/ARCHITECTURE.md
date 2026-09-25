@@ -6,7 +6,8 @@ The VPS registry owns saved workspace definitions. Explicit Save captures the li
 
 A terminal belongs to a named session on the dedicated tmux server `tmux -L vps-workspaces`. Each terminal has its own session, rather than treating tmux's internal splits as cmux's layout. code-server terminals and native cmux attach to these same sessions. Closing a viewer disconnects a client, not the session. tmux uses the most recently active client size (`window-size latest`), so the terminal fits the viewer currently using it. Other viewers may see padding or clipping because a single shared terminal process has one size.
 
-Ordinary tmux shells do not start coding agents automatically. HAPI-bound surfaces use HAPI to attach or resume the saved conversation. After a reboot, opening from the Mac recreates missing shells; the user resumes the desired agent conversation. Restarting the sharing service does not restart tmux.
+Ordinary tmux shells do not start coding agents automatically. Native Codex surfaces use the official shared daemon and independently sized native clients;
+see [native Codex](CODEX.md). Legacy HAPI fields remain readable during migration. After a reboot, opening from the Mac recreates missing shells; the user resumes the desired agent conversation. Restarting the sharing service does not restart tmux.
 
 ## Browser pages
 

@@ -36,6 +36,13 @@ def main() -> None:
     args = parser.parse_args()
     if sys.platform != "linux":
         raise RuntimeError("Tool resource isolation requires Linux systemd and cgroup v2")
+    config = args.codex_home / "config.toml"
+    settings = tomlkit.parse(config.read_text()) if config.exists() else {}
+    if settings.get("sandbox_mode") != "danger-full-access":
+        raise RuntimeError(
+            "This adapter requires an existing full-access Codex configuration. "
+            "Codex's workspace-write sandbox strips BASH_ENV; sandbox settings were not changed."
+        )
     source = Path(__file__).resolve().parents[2]
     target = Path.home() / ".local/share/vps-workspaces/resources"
     target.mkdir(parents=True, exist_ok=True)

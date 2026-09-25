@@ -11,7 +11,7 @@ It preserves per-command cgroups, resource hints and memory feedback, with these
 - Supports Codex's login-shell invocation as well as `bash -c`.
 - Keeps the supervisor outside the command's cgroup so it can report an OOM.
 - Uses hard memory/PID limits and fails closed if assignment fails.
-- Avoids changing host bash; a Codex-only BASH_ENV adapter invokes it.
+- Avoids changing host bash; a full-access Codex BASH_ENV adapter invokes it.
 - Records counters, never command text or environment values.
 - Leaves surviving background processes inside the same aggregate budget.
 

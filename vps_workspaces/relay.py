@@ -10,7 +10,7 @@ def main() -> None:
 
     root = pathlib.Path.home() / ".local/share/vps-workspaces"
     session = os.environ.get("VWS_SESSION", "")
-    if not session and os.environ.get("HAPI_SESSION_ID"):
+    if not session and (os.environ.get("CODEX_THREAD_ID") or os.environ.get("HAPI_SESSION_ID")):
         from vps_workspaces.model import surfaces
 
         for p in root.glob("*.json"):
@@ -19,7 +19,8 @@ def main() -> None:
                 matches = [
                     s["session"]
                     for s in surfaces(doc["layout"])
-                    if s.get("hapi_session") == os.environ["HAPI_SESSION_ID"]
+                    if (os.environ.get("CODEX_THREAD_ID") and s.get("codex_thread") == os.environ["CODEX_THREAD_ID"])
+                    or (os.environ.get("HAPI_SESSION_ID") and s.get("hapi_session") == os.environ["HAPI_SESSION_ID"])
                 ]
                 if matches:
                     session = matches[0]

@@ -31,12 +31,10 @@ python3 workspace.py save my-project
 python3 workspace.py autosave-status
 ```
 
-`new` provisions the browser IDE and creates a HAPI-owned Codex conversation. The directory
-must already exist on the VPS. It prints the stable sharing link only after setup succeeds.
-`open` checks the IDE and attaches another native viewer. It does not clone an agent.
-If creation reports a HAPI error after provisioning, the shell workspace remains saved.
-Fix HAPI connectivity, inspect `workspace.py hapi list`, then bind the intended session
-with `workspace.py hapi bind NAME SURFACE SESSION`; do not repeatedly create agents.
+`new` provisions the browser IDE and creates an official native Codex conversation. The
+VPS directory must exist. It prints the sharing link after setup succeeds. `open` attaches
+another viewer of the same thread. See [native Codex](CODEX.md) for daemon lifecycle,
+legacy migration, and the distinction between shared tmux shells and native agent clients.
 
 Install native palette actions with `python3 workspace.py install cmux` on the Mac:
 
@@ -59,7 +57,7 @@ prompt. Existing running local processes are never forcibly migrated. See [autos
 
 ```sh
 python3 workspace.py doctor --json
-python3 workspace.py hapi list
+python3 workspace.py codex list
 systemctl --user status vps-workspaces.service
 systemctl --user status vps-ide-my-project.service
 journalctl --user -u vps-workspaces.service -n 50
@@ -76,14 +74,14 @@ and preview content. On the Mac, `doctor` reports cmux access and saved autosave
 | Wrong preview app | Check the saved URL **and** the service owning that port on the VPS |
 | Autosave conflict | Inspect `autosave-drafts`; reopen the latest workspace, or explicitly use `keep-local` after reviewing both layouts |
 | Access denied from cmux | Run the command in a local cmux shell; SSH ancestry does not satisfy its access policy |
-| Missing agent after reboot | Inspect HAPI Hub/Runner, then reopen the saved workspace to resume through HAPI |
+| Missing agent after reboot | Inspect `vws-codex.service`, then reopen the saved workspace to resume its native thread |
 | Agent terminal vanished after SSH reconnect | From a local cmux shell, inspect `cmux ssh-session-list --all-workspaces` and use `cmux ssh-session-attach --session-id ID --workspace WORKSPACE` to reattach the existing PTY |
 | Linux sandbox namespace failure | Check the installed distribution's AppArmor bubblewrap profile; preserve global restrictions |
 
 Do not use `keep-local` merely to silence an error. Browser storage and draft text are not
 part of layout autosave. The backup configuration is authoritative for snapshot locations.
 
-Autosave discovers HAPI agents and tmux shells, including native SSH sessions reattached under
+Autosave discovers managed native Codex clients and tmux shells, including native SSH sessions reattached under
 new surface IDs. It registers new remote workspaces automatically. Terminal removals save after
 ten seconds with a recovery copy; transient connection errors retry before notifying. Genuine
 revision conflicts retain drafts and never overwrite another viewer. The Mac launchd worker is
@@ -98,7 +96,7 @@ revision conflicts retain drafts and never overwrite another viewer. The Mac lau
 4. In the installed app, run `UV_PROJECT_ENVIRONMENT=../venv uv sync --locked --no-dev`.
    Re-run the relevant installer after changing unit definitions, then reload systemd.
 5. Restart the gateway only for gateway changes. Reload a browser window for extension changes.
-   IDE restarts disconnect viewers; they should not stop HAPI-owned agents or tmux sessions.
+   IDE restarts disconnect viewers; they should not stop shared agent engines or tmux sessions.
 6. Verify unauthenticated requests are rejected, a valid sharing link opens its IDE, previews
    serve the right apps, and existing agents still have the same session identities.
 7. To roll back, restore the affected app/config backup, reload systemd and Caddy as needed,
@@ -114,13 +112,13 @@ Changes under `vps_workspaces/` need the same package on both source and install
   existing public hostnames requires editing their registry records and rebuilding Caddy routes.
 - `install ide NAME` is idempotent and preserves existing VS Code settings.
 - `install backups ROLE` retains the configured snapshot location and additional SQLite roots.
-- `hapi new`, `hapi bind`, and `hapi migrate` manage saved terminal bindings; inspect `hapi --help`
-  before migrations. Exit an original engine normally before migrating its conversation.
-- Prefer native Caddy, systemd, rsnapshot, HAPI and cmux features over another custom service.
+- `codex list` lists native conversations. Legacy HAPI migration needs an idle old engine;
+  follow [native Codex](CODEX.md) and the private installation runbook.
+- Prefer native Caddy, systemd, rsnapshot, Codex and cmux features over another custom service.
   Record upstream versions, links, licenses and adaptations in the relevant NOTICE/docs.
 
 The current backend expects Linux systemd, the documented rootless Caddy arrangement,
-and the pinned Linux amd64 code-server/HAPI releases. It is not a universal installer.
+and the pinned Linux amd64 code-server release and official Codex daemon. It is not a universal installer.
 Workspace capability links grant a terminal under the VPS user; they are intended for
 trusted collaborators, not isolation between untrusted users.
 

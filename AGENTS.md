@@ -3,7 +3,7 @@
 ## Start here
 
 Read [README.md](README.md), then [docs/MAINTENANCE.md](docs/MAINTENANCE.md).
-This repository integrates upstream cmux, HAPI, tmux, code-server and Caddy.
+This repository integrates upstream cmux, native Codex, tmux, code-server and Caddy.
 It does not implement a terminal emulator, an IDE, or a browser engine.
 
 Run `python3 workspace.py --help` for the main CLI and
@@ -24,7 +24,8 @@ changes the access setting. The more restrictive cmux-only mode requires local s
 | `vps_workspaces/contracts.py`, `model.py` | Types and runtime document validation |
 | `vps_workspaces/persistence.py`, `shell-integration.*` | Automatic shell persistence and native workspace adoption |
 | `vps_workspaces/autosave.py` | Native layout snapshots, debounce and conflicts |
-| `vps_workspaces/hapi.py`, `hapi_bridge.py` | HAPI binding and official CLI attachment |
+| `vps_workspaces/codex.py`, `install/codex.py` | Official shared Codex daemon and native clients |
+| `vps_workspaces/hapi.py`, `hapi_bridge.py` | Legacy migration compatibility; not used for new workspaces |
 | `vps_workspaces/server.py`, `sharing.py`, `caddy_routes.py` | Link authentication and Caddy configuration |
 | `vps_workspaces/ide.py`, `ide-extension/` | code-server setup and VS Code layout adapter |
 | `vps_workspaces/backup.py`, `install/` | SQLite preparation and standard service installers |
@@ -48,7 +49,7 @@ changes the access setting. The more restrictive cmux-only mode requires local s
   propagate. Check synchronization status and conflicts before modifying both copies.
 - Back up affected runtime configuration before deployment. Validate Caddy before reloading.
   Restart only affected services, and keep a concrete rollback path.
-- Do not stop a HAPI-owned agent to refresh an IDE or native viewer. A viewer attachment
+- Do not stop an agent engine to refresh an IDE or native viewer. A viewer attachment
   and the shared agent are different processes. Never run concurrent copies of a migrated thread.
 - Preserve optimistic revision checks and recovery drafts. Do not “fix” a save conflict by
   silently forcing a revision or replacing another viewer's state.

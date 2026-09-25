@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import importlib
+import os
 import sys
+from pathlib import Path
 
 COMMANDS = {
     "persistence": "persistence",
@@ -9,6 +11,7 @@ COMMANDS = {
     "serve": "server",
     "autosave": "autosave",
     "backup": "backup",
+    "codex": "codex",
     "hapi": "hapi",
     "relay": "relay",
     "diagnose": "diagnostics",
@@ -18,6 +21,7 @@ INSTALLERS = {
     "resources": "resources",
     "server": "server",
     "ide": "ide",
+    "codex": "codex",
     "hapi": "hapi",
     "backups": "backups",
     "mac-access": "mac_access",
@@ -25,7 +29,17 @@ INSTALLERS = {
 }
 
 
+def environment() -> None:
+    if sys.platform == "linux" and sys.prefix == sys.base_prefix:
+        root = Path(__file__).resolve().parents[1]
+        for directory in (root / ".venv", root.parent / "venv"):
+            python = directory / "bin/python"
+            if python.exists():
+                os.execv(str(python), [str(python), *sys.argv])
+
+
 def main() -> None:
+    environment()
     args = sys.argv[1:]
     try:
         if args and args[0] == "install":

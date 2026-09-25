@@ -114,11 +114,11 @@ def create(name: str, title: str, cwd: str) -> Workspace:
     validate(doc)
     ensure_ide(ROOT, doc)
     saved = save(doc)
-    from vps_workspaces.hapi_bridge import Hapi
+    from vps_workspaces.codex import create as create_thread
 
-    sid = Hapi().create(str(directory), title)
+    sid = create_thread(str(directory), title)
     first = next(surfaces(saved["layout"]))
-    first["hapi_session"] = sid
+    first["codex_thread"] = sid
     return save(saved)
 
 
@@ -128,7 +128,7 @@ def prepare(name: str) -> Workspace:
     doc = load(name)
     ensure_ide(ROOT, doc)
     for surface in surfaces(doc["layout"]):
-        if surface["type"] == "terminal" and not surface.get("hapi_session"):
+        if surface["type"] == "terminal" and not (surface.get("codex_thread") or surface.get("hapi_session")):
             ensure(surface["session"], surface.get("cwd"))
     return doc
 
@@ -137,10 +137,16 @@ def current_name() -> str:
     workspace_id = os.environ.get("CMUX_WORKSPACE_ID")
     session = os.environ.get("VWS_SESSION")
     hapi = os.environ.get("HAPI_SESSION_ID")
+    thread = os.environ.get("CODEX_THREAD_ID")
     matches = set()
     for doc in WorkspaceRegistry(ROOT).documents():
         terminals = [s for s in surfaces(doc["layout"]) if s["type"] == "terminal"]
-        if any((session and s["session"] == session) or (hapi and s.get("hapi_session") == hapi) for s in terminals):
+        if any(
+            (session and s["session"] == session)
+            or (hapi and s.get("hapi_session") == hapi)
+            or (thread and s.get("codex_thread") == thread)
+            for s in terminals
+        ):
             matches.add(doc["id"])
         if workspace_id:
             sessions = {s["session"] for s in terminals} | {terminal_session(doc["id"], "agent")}
@@ -170,37 +176,29 @@ def terminal_session(name: str, label: str) -> str:
 
 
 def surface_agents(name: str, workspace_id: str) -> dict[str, Surface]:
-    """Match live HAPI processes to native panes without starting or migrating agents."""
-    from vps_workspaces.hapi_bridge import Hapi
+    from vps_workspaces.codex import checked_thread
 
     checked_id(name)
-    shells: dict[str, Surface] = {}
+    found: dict[str, Surface] = {}
     for path in (ROOT / "shells").glob("*.json"):
         record = json.loads(path.read_text())
         if record["workspace"] == workspace_id:
-            shells[path.stem] = record["surface"]
-    try:
-        sessions = {s["id"]: s for s in Hapi(timeout=5).request("/api/sessions")["sessions"] if s.get("active")}
-    except (OSError, RuntimeError):
-        if shells:
-            return shells
-        raise
-    urls = {
-        s["metadata"]["hapiMcpUrl"]: sid for sid, s in sessions.items() if (s.get("metadata") or {}).get("hapiMcpUrl")
+            found[path.stem] = record["surface"]
+    migration = ROOT / "hapi-thread-map.json"
+    legacy = json.loads(migration.read_text()) if migration.exists() else {}
+    known = {
+        s.get("codex_thread") or legacy.get(s.get("hapi_session", "")): s
+        for doc in WorkspaceRegistry(ROOT).documents()
+        for s in surfaces(doc["layout"])
+        if s.get("codex_thread") or s.get("hapi_session")
     }
-    matches: dict[str, set[str]] = {}
     for process in pathlib.Path("/proc").glob("[0-9]*"):
         try:
             command = (process / "cmdline").read_bytes().decode().split("\0")
-            if len(command) < 3 or pathlib.Path(command[0]).name != "hapi":
+            if "--remote" not in command or "resume" not in command:
                 continue
-            sid = None
-            if command[1] == "resume" and command[2] in sessions:
-                sid = command[2]
-            elif command[1] == "mcp" and "--url" in command:
-                sid = urls.get(command[command.index("--url") + 1])
-            if not sid:
-                continue
+            thread = checked_thread(command[command.index("resume") + 1])
+            directory = str((process / "cwd").resolve())
             for _ in range(12):
                 env = dict(
                     item.split("=", 1)
@@ -208,7 +206,15 @@ def surface_agents(name: str, workspace_id: str) -> dict[str, Surface]:
                     if "=" in item
                 )
                 if env.get("CMUX_WORKSPACE_ID") == workspace_id and env.get("CMUX_SURFACE_ID"):
-                    matches.setdefault(env["CMUX_SURFACE_ID"], set()).add(sid)
+                    native_id = env["CMUX_SURFACE_ID"]
+                    label = "agent-" + native_id.lower()
+                    found[native_id] = known.get(thread) or {
+                        "id": label,
+                        "type": "terminal",
+                        "session": terminal_session(name, label),
+                        "codex_thread": thread,
+                        "cwd": directory,
+                    }
                     break
                 parent = (process / "stat").read_text().rsplit(")", 1)[1].split()[1]
                 if parent == "0":
@@ -216,24 +222,7 @@ def surface_agents(name: str, workspace_id: str) -> dict[str, Surface]:
                 process = pathlib.Path("/proc") / parent
         except (OSError, ValueError, IndexError, UnicodeError):
             continue
-    result: dict[str, Surface] = shells
-    for native_id, candidates in matches.items():
-        if len(candidates) != 1:
-            continue
-        sid = next(iter(candidates))
-        metadata = sessions[sid].get("metadata") or {}
-        if metadata.get("flavor") != "codex":
-            continue
-        label = "agent-" + native_id.lower()
-        checked_id(label)
-        result[native_id] = {
-            "id": label,
-            "type": "terminal",
-            "session": terminal_session(name, label),
-            "hapi_session": sid,
-            "cwd": metadata.get("path", "~/Coding"),
-        }
-    return result
+    return found
 
 
 def prepare_terminal(name: str, label: str, revision: int | str) -> Surface:
@@ -305,7 +294,7 @@ def attach(name: str, surface: str) -> NoReturn:
     if s is None:
         raise ValueError("Unknown terminal")
     session = s["session"]
-    if not s.get("hapi_session"):
+    if not (s.get("codex_thread") or s.get("hapi_session")):
         ensure(session, s.get("cwd"))
     route = {
         k: v
@@ -323,8 +312,12 @@ def attach(name: str, surface: str) -> NoReturn:
     if route.get("CMUX_SOCKET_PATH"):
         atomic(ROOT / (session + ".route"), {**route, "workspace_name": name, "saved_at": int(time.time())})
         for key, value in route.items():
-            if key != "saved_at" and not s.get("hapi_session"):
+            if key != "saved_at" and not (s.get("codex_thread") or s.get("hapi_session")):
                 run([*TMUX, "set-environment", "-t", session, key, value])
+    if s.get("codex_thread"):
+        from vps_workspaces.codex import attach as codex_attach
+
+        codex_attach(s["codex_thread"])
     if s.get("hapi_session"):
         from vps_workspaces.hapi_bridge import attach as hapi_attach
 
@@ -385,7 +378,7 @@ def main() -> None:
                     [
                         ensure(s["session"], s.get("cwd"))
                         for s in surfaces(d["layout"])
-                        if s["type"] == "terminal" and not s.get("hapi_session")
+                        if s["type"] == "terminal" and not (s.get("codex_thread") or s.get("hapi_session"))
                     ]
                 )
             )

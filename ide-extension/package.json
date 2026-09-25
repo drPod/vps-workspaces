@@ -23,10 +23,6 @@
       {
         "command": "vpsWorkspaces.share",
         "title": "VPS Workspaces: Copy Sharing Link"
-      },
-      {
-        "command": "vpsWorkspaces.hapi",
-        "title": "VPS Workspaces: Open HAPI Sessions"
       }
     ]
   },

@@ -4,7 +4,7 @@
 
 - macOS with cmux installed at `/Applications/cmux.app`.
 - [uv](https://docs.astral.sh/uv/getting-started/installation/) on both machines for Python 3.12 and locked dependencies.
-  Existing Mac commands also work with system Python 3.9 because those entry points use the standard library.
+  Use Python 3.12+ for native Codex integration commands.
 - Linux VPS with SSH keys, Python 3.12, tmux, systemd user services, and a `~/Coding` directory.
 - DNS resolving the workspace domain and its subdomains to the VPS, with ports 80/443 reachable for Caddy's automatic TLS certificates. Explicit hostnames are generated, so a wildcard TLS certificate is not required.
 - Existing rootless Docker Caddy deployment: container `caddy`, `~/deploy/caddy/sites` mounted at `/etc/caddy/sites` and imported by `/etc/caddy/Caddyfile`, `~/deploy/www` mounted at `/srv`. Caddy must run as the same host user through rootless Docker to read the private Unix socket. Adapt these paths in `vps_workspaces/remote.py` and `vps_workspaces/server.py` for other installations.
@@ -50,7 +50,9 @@ relay readiness deadline. Reloading applies to new SSH connections only. Let
 existing transports reconnect naturally; exiting a shared master interrupts
 every viewer using it, even though persistent remote agents survive.
 
-Install [code-server](IDE.md) and [HAPI](HAPI.md) before creating HAPI-backed workspaces.
+Install [code-server](IDE.md) and the official Codex CLI (tested with 0.157.0), then run
+`python3 workspace.py install codex` on the VPS. See [native Codex](CODEX.md).
+HAPI is not required for new workspaces.
 For the default new-workspace flow, create a VPS project directory and run `workspace.py new`
 from a local Mac cmux shell after completing Mac setup.
 

@@ -11,7 +11,9 @@ an MCP server, or change interactive login shells.
 
 ## Install
 
-Requires Linux cgroup v2, systemd 254+ with user delegation, and the official Codex CLI.
+Requires Linux cgroup v2, systemd 254+ with user delegation, and the official Codex CLI
+already configured with `sandbox_mode = "danger-full-access"`. The installer refuses other
+defaults; it never weakens the sandbox to make this adapter work.
 From this checkout, after `uv sync --locked`:
 
 ```sh
@@ -59,9 +61,11 @@ upstream CPU scheduler needs sched_ext (6.12+); its memory controller also requi
 support for that controller. No kernel upgrade or reboot is required for this adapter.
 
 This is protection from accidental resource exhaustion, not a security boundary. It
-covers Bash commands receiving Codex's configured environment, including `-lc` and `-c`.
+covers full-access Bash commands receiving Codex's configured environment, including `-lc` and `-c`.
 It does not automatically cap non-Bash execution, a separately managed Docker container,
-remote SSH work, or work submitted to another daemon. Those need their own service or
+remote SSH work, or work submitted to another daemon. A live workspace-write sandbox
+test stripped BASH_ENV and bypassed the adapter. Per-thread sandbox overrides therefore
+need independent resource isolation; this adapter does not cover them. Those need their own service or
 container limits. Agents run under the same trusted Unix account and can bypass limits.
 
 ## Verify and recover

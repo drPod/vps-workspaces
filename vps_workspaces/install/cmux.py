@@ -47,6 +47,7 @@ def main() -> None:
                             {
                                 "type": "terminal",
                                 "command": command + " new --launcher",
+                                "env": {"VWS_LOCAL": "1"},
                                 "focus": True,
                             }
                         ]

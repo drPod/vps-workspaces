@@ -14,6 +14,7 @@ class Surface(SurfaceRequired, total=False):
     title: str
     session: str
     cwd: str
+    codex_thread: str
     hapi_session: str
     url: str
     web_url: str

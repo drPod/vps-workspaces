@@ -65,9 +65,12 @@ def adopt(current: JsonObject) -> None:
     if not terminals or any(s["id"] not in found for s in terminals):
         return
     docs = w.remote("list")
-    sessions = {s.get("hapi_session") or s["session"] for s in found.values()}
+    sessions = {s.get("codex_thread") or s.get("hapi_session") or s["session"] for s in found.values()}
     matching = [
-        d for d in docs if sessions & {s.get("hapi_session") or s.get("session") for s in surfaces(d["layout"])}
+        d
+        for d in docs
+        if sessions
+        & {s.get("codex_thread") or s.get("hapi_session") or s.get("session") for s in surfaces(d["layout"])}
     ]
     if len(matching) > 1:
         raise ValueError("Terminal sessions belong to multiple saved workspaces")
@@ -75,9 +78,14 @@ def adopt(current: JsonObject) -> None:
         doc = matching[0]
         name = doc["id"]
         known = {
-            s.get("hapi_session") or s.get("session"): s for s in surfaces(doc["layout"]) if s["type"] == "terminal"
+            s.get("codex_thread") or s.get("hapi_session") or s.get("session"): s
+            for s in surfaces(doc["layout"])
+            if s["type"] == "terminal"
         }
-        found = {sid: known.get(s.get("hapi_session") or s["session"], s) for sid, s in found.items()}
+        found = {
+            sid: known.get(s.get("codex_thread") or s.get("hapi_session") or s["session"], s)
+            for sid, s in found.items()
+        }
     else:
         doc = {"id": name, "name": current["title"], "layout": {"pane": {"surfaces": [], "selected": 0}}}
     state: Instance = {

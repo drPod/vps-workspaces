@@ -3,8 +3,8 @@
 **Your cmux workspace, backed by a VPS—and available in a browser.**
 
 Keep native terminal and browser panes on your Mac. Reopen the same coding session from
-another device, or open its link in a familiar VS Code workbench. HAPI supplies the shared
-Codex session; cmux and code-server supply the interfaces.
+another device, or open its link in a familiar VS Code workbench. The official Codex daemon
+supplies shared conversations; cmux and code-server supply independently sized interfaces.
 
 [Get started](docs/INSTALL.md) · [Commands & maintenance](docs/MAINTENANCE.md) ·
 [Architecture](docs/ARCHITECTURE.md) · [For agents](AGENTS.md) ·
@@ -14,7 +14,7 @@ Codex session; cmux and code-server supply the interfaces.
 
 - **Native cmux on the Mac.** SSH terminals and browser panes, with their saved arrangement.
 - **VS Code in the browser.** code-server opens project files, terminals and web previews.
-- **One shared Codex engine.** HAPI provides independent terminal frontends and its session app.
+- **One shared Codex engine.** The official daemon serves independent native terminal clients.
 - **Automatic layout saves.** Split proportions, tabs, URLs and session bindings persist;
   conflicting edits pause with a recovery draft.
 - **A stable workspace link.** Create a managed workspace and retrieve its link from the CLI
@@ -36,7 +36,7 @@ python3 workspace.py install cmux
 python3 workspace.py new my-project --cwd '~/Coding/my-project'
 ```
 
-The VPS directory must already exist. Creation provisions its browser IDE and HAPI conversation,
+The VPS directory must already exist. Creation provisions its browser IDE and native Codex conversation,
 opens the native workspace, and prints the link. The cmux palette also offers **New VPS Workspace**.
 
 ```sh
@@ -56,15 +56,14 @@ See [automatic persistence](docs/AUTOSAVE.md) for permissions, recovery and the 
 flowchart LR
   Mac[cmux on Mac] -->|SSH and native panes| VPS[VPS workspace]
   Browser[code-server in browser] --> VPS
-  VPS --> HAPI[HAPI-owned Codex engine]
-  Phone[HAPI app] --> HAPI
+  VPS --> Codex[Official Codex app-server daemon]
   VPS --> Apps[App and report previews]
   VPS --> State[Saved layout and session bindings]
   State --> Backups[rsnapshot backups]
 ```
 
 Browser cookies, form contents and Post Studio drafts stay in each browser; saving a layout
-saves its URL, not that browser's storage. HAPI-bound Codex panes fit each viewer independently.
+saves its URL, not that browser's storage. Native Codex panes fit each viewer independently.
 Ordinary shared tmux shells still have one underlying terminal size. cmux's SSH relay currently
 rejects remote browser automation commands.
 
@@ -88,9 +87,12 @@ and recovery. Project code is MIT; vendored components retain their included lic
 
 ## Upstream work
 
-Built on **cmux, HAPI, tmux, code-server, Caddy and rsnapshot**. The extension reuses Microsoft's
+Built on **cmux, Codex, tmux, code-server, Caddy and rsnapshot**. The extension reuses Microsoft's
 Simple Browser and Jonathan Carter's Workspace Layout helper. cmux's own settings editor
 handles JSONC configuration; Zod validates extension input.
+
+Legacy HAPI adapters remain temporarily for existing registry migrations; new workspaces
+do not use HAPI or inject its tools/prompts. See [native Codex](docs/CODEX.md).
 
 Related cmux pull requests that informed the design:
 
@@ -125,7 +127,7 @@ For changes affecting running workspaces, follow the [deployment checklist](docs
 ### Tool resource isolation
 
 The optional [AgentCgroup adapter](docs/AGENTCGROUP.md) automatically places Codex Bash
-tool commands in separately limited cgroups. It reuses and attributes
+tool commands in separately limited cgroups for existing full-access configurations. It reuses and attributes
 [eunomia-bpf/agentcgroup](https://github.com/eunomia-bpf/agentcgroup); upstream source and
 GPL-2.0 notices are preserved. The deployed adapter uses standard cgroup v2, not the
 experimental eBPF scheduler or patched-kernel memory controller.
