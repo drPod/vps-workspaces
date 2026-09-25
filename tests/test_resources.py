@@ -46,6 +46,7 @@ class CgroupTests(unittest.TestCase):
                 "AGENTCG_ROOT": os.environ["VWS_TEST_CGROUP"],
                 "AGENTCG_LOG": str(Path(directory) / "metrics.jsonl"),
                 "AGENT_RESOURCE_HINT": "memory:low",
+                "VWS_TOOL_CGROUP": "1",
             }
             return subprocess.run(
                 ["/bin/bash", mode, command],
