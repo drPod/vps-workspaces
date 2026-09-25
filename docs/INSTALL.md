@@ -34,6 +34,22 @@ For user services to survive logout, enable lingering for your VPS account if no
 sudo loginctl enable-linger "$USER"
 ```
 
+Configure SSH liveness on the VPS so abandoned connections release cmux's reverse
+ports after sleep or a network change. On Ubuntu with `sshd_config.d` enabled:
+
+```sh
+sudo install -m 644 deploy/ssh/40-workspace-liveness.conf /etc/ssh/sshd_config.d/
+sudo sshd -t && sudo systemctl reload ssh
+sudo sshd -T | rg clientalive
+```
+
+Back up an existing file at that path before replacing it. The effective settings
+must be `clientaliveinterval 10` and `clientalivecountmax 2`; an earlier directive
+or a `Match` block can override them. This leaves margin under cmux's 60-second
+relay readiness deadline. Reloading applies to new SSH connections only. Let
+existing transports reconnect naturally; exiting a shared master interrupts
+every viewer using it, even though persistent remote agents survive.
+
 Install [code-server](IDE.md) and [HAPI](HAPI.md) before creating HAPI-backed workspaces.
 For the default new-workspace flow, create a VPS project directory and run `workspace.py new`
 from a local Mac cmux shell after completing Mac setup.
@@ -49,7 +65,14 @@ This validates/reloads Caddy after adding explicit workspace and app hostnames. 
 
 ## Mac setup
 
-Configure a working SSH alias (`myvps` by default). From a **local** terminal in cmux, in this repository:
+Configure a working SSH alias (`myvps` by default). Include `ServerAliveInterval 15`,
+`ServerAliveCountMax 3`, and `ConnectTimeout 15` in that host's SSH configuration,
+including any separate administrative alias. Keep existing identity and host-key
+settings. Client checks detect a lost server; the server checks above reclaim
+abandoned reverse ports. Neither replaces the other. The `install mac-access`
+tunnel already specifies its own liveness checks and disables multiplexing.
+
+From a **local** terminal in cmux, in this repository:
 
 ```sh
 uv sync --locked
