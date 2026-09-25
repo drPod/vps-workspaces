@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import hashlib
 import pathlib
+import shutil
 import socket
 import subprocess
 import time
@@ -47,6 +49,11 @@ def ensure_ide(root: pathlib.Path, doc: Workspace) -> None:
         current_settings.setdefault(key, value)
     if not workspace.exists() or config != read_json(workspace):
         write_json(workspace, config)
+    data = ide / "data"
+    if len(str(data / "code-server-ipc.sock").encode()) >= 104:
+        data = root / "ide-data" / hashlib.sha256(name.encode()).hexdigest()[:12]
+        if (ide / "data").exists() and not data.exists():
+            shutil.copytree(ide / "data", data, ignore=shutil.ignore_patterns("*.sock", "*.lock"))
     unit = pathlib.Path.home() / ".config/systemd/user" / ("vps-ide-" + name + ".service")
     definition = service_template(
         "ide.service.in",
@@ -54,6 +61,7 @@ def ensure_ide(root: pathlib.Path, doc: Workspace) -> None:
         binary=str(binary),
         home=str(pathlib.Path.home()),
         ide=str(ide),
+        data=str(data),
         extensions=str(extensions),
         workspace=str(workspace),
     )

@@ -98,18 +98,33 @@ def store_instance(name: str, state: Instance) -> None:
 
 
 def open_workspace(name: str) -> str:
+    with (STATE / "autosave.lock").open("w") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        return _open_workspace(name)
+
+
+def _open_workspace(name: str) -> str:
     doc = remote("prepare", name)
     validate(doc)
 
     first = next(surfaces(doc["layout"]))
-    if first["type"] != "terminal":
-        raise ValueError("The first pane must start with a terminal for native SSH bootstrap")
-    created = cmux("ssh", SSH_HOST, "--name", doc["name"], "--command", attach_command(name, first))
+    created = cmux("ssh", SSH_HOST, "--name", doc["name"])
     ws = ident(created, "workspace")
     if not ws:
         raise RuntimeError("No workspace returned by cmux")
     time.sleep(1)
     initial = tree(ws)["panes"][0]
+    for _ in range(30):
+        try:
+            sessions = cmux("ssh-session-list", "--workspace", ws).get("sessions", [])
+            if any(session.get("attachments") for session in sessions):
+                time.sleep(1)
+                break
+        except RuntimeError:
+            pass
+        time.sleep(1)
+    else:
+        raise RuntimeError("SSH workspace did not become ready; existing sessions were preserved")
     bindings = {}
     pane_bindings = {}
 
@@ -204,7 +219,11 @@ def open_workspace(name: str) -> str:
         walk(node["children"][0], pane, surface)
         walk(node["children"][1], rp, rs)
 
-    walk(doc["layout"], initial["id"], initial["surfaces"][0]["id"])
+    initial_surface = initial["surfaces"][0]["id"]
+    replacement = add_surface(first, initial["id"])
+    cmux("close-surface", "--workspace", ws, "--surface", initial_surface)
+    initial_surface = replacement
+    walk(doc["layout"], initial["id"], initial_surface)
     store(
         name,
         {
@@ -233,7 +252,9 @@ def snapshot_workspace(name: str, state: Instance, current: JsonObject) -> Works
         and state["bindings"].get(s["id"]) not in known
     ]
     if unbound:
-        discovered = remote("surface-agents", name, state["workspace"])
+        from vps_workspaces.persistence import discover
+
+        discovered = discover(name, current)
         for s in unbound:
             if s["id"] in discovered:
                 agent = discovered[s["id"]]
@@ -265,7 +286,7 @@ def snapshot_workspace(name: str, state: Instance, current: JsonObject) -> Works
             item: Surface = copy.copy(old) if old else {"id": "browser-" + s["id"].lower()[:8], "type": "browser"}
             item["title"] = s["title"]
             if s["type"] == "browser":
-                item["url"] = s["url"]
+                item["url"] = s.get("url") or (old.get("url") if old else None) or "about:blank"
             items.append(item)
             state["bindings"][s["id"]] = item["id"]
             if s["id"] == p["selected_surface_id"]:

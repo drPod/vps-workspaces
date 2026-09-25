@@ -12,14 +12,16 @@ export const surfaceSchema = z.discriminatedUnion("type", [
   }),
   surfaceBase.extend({
     type: z.literal("browser"),
-    url: z.url().refine((value) => {
-      const url = new URL(value);
-      return (
-        ["http:", "https:"].includes(url.protocol) &&
-        !url.username &&
-        !url.password
-      );
-    }),
+    url: z.literal("about:blank").or(
+      z.url().refine((value) => {
+        const url = new URL(value);
+        return (
+          ["http:", "https:"].includes(url.protocol) &&
+          !url.username &&
+          !url.password
+        );
+      }),
+    ),
   }),
 ]);
 export type Surface = z.infer<typeof surfaceSchema>;

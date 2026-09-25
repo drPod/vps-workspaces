@@ -63,6 +63,8 @@ def validate(doc: Workspace) -> Workspace:
 
                         checked_session(s["hapi_session"])
                 elif s["type"] == "browser":
+                    if s.get("url") == "about:blank":
+                        continue
                     if not isinstance(s.get("url"), str) or any(c.isspace() for c in s["url"]):
                         raise ValueError("Browser URL must not contain whitespace")
                     u = urlsplit(s["url"])

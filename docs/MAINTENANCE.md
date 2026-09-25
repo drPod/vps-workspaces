@@ -52,8 +52,8 @@ This installed-version integration has been source-checked; the deployment verif
 record identifies any local palette tests still pending.
 Browser workspaces open with the file sidebar collapsed; toggle it normally from VS Code when needed.
 
-The ordinary local New Workspace action remains available; arbitrary local processes are not
-automatically migrated to the VPS.
+With `persistence install` enabled, ordinary new cmux workspaces become remote at their first
+prompt. Existing running local processes are never forcibly migrated. See [autosave](AUTOSAVE.md).
 
 ## Diagnose a problem
 
@@ -83,14 +83,11 @@ and preview content. On the Mac, `doctor` reports cmux access and saved autosave
 Do not use `keep-local` merely to silence an error. Browser storage and draft text are not
 part of layout autosave. The backup configuration is authoritative for snapshot locations.
 
-Autosave discovers new VPS HAPI Codex terminals from their live process ancestry and session
-metadata; it binds the existing conversation without spawning another agent. Plain unmanaged
-shells still require `add-terminal`. Temporary unmanaged terminals get ten seconds to close
-before a desktop alert; no incomplete layout is saved during that grace period. Connection
-timeouts retry automatically and alert only after a minute of continuous failure. An unchanged save error is not notified again after an
-autosave worker restart. If a saved terminal disappears, autosave preserves its binding and
-writes a recovery draft instead of saving a browser-only replacement. Reattach the terminal;
-if its removal was intentional, an explicit `workspace.py save NAME` confirms that removal.
+Autosave discovers HAPI agents and tmux shells, including native SSH sessions reattached under
+new surface IDs. It registers new remote workspaces automatically. Terminal removals save after
+ten seconds with a recovery copy; transient connection errors retry before notifying. Genuine
+revision conflicts retain drafts and never overwrite another viewer. The Mac launchd worker is
+`com.drpod.vps-workspaces-autosave`; its log and status are in the Mac state directory.
 
 ## Update or roll back
 

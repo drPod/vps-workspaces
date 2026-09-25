@@ -4,6 +4,7 @@ import importlib
 import sys
 
 COMMANDS = {
+    "persistence": "persistence",
     "doctor": "doctor",
     "serve": "server",
     "autosave": "autosave",

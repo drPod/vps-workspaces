@@ -8,8 +8,9 @@ It does not implement a terminal emulator, an IDE, or a browser engine.
 
 Run `python3 workspace.py --help` for the main CLI and
 `python3 workspace.py doctor --json` for the local installation's health report.
-Run Mac workspace commands in a local cmux terminal; SSH access alone does not
-satisfy cmux's “processes started inside cmux only” policy.
+Mac commands require cmux socket access. Automatic persistence uses launchd and requires
+user-enabled Automation mode; SSH administration works with that setting. The installer never
+changes the access setting. The more restrictive cmux-only mode requires local shell ancestry.
 
 ## Code map
 
@@ -21,6 +22,7 @@ satisfy cmux's “processes started inside cmux only” policy.
 | `vps_workspaces/workspace.py` | Native cmux layouts and link actions |
 | `vps_workspaces/remote.py`, `registry.py` | VPS registry, provisioning and terminal attachment |
 | `vps_workspaces/contracts.py`, `model.py` | Types and runtime document validation |
+| `vps_workspaces/persistence.py`, `shell-integration.*` | Automatic shell persistence and native workspace adoption |
 | `vps_workspaces/autosave.py` | Native layout snapshots, debounce and conflicts |
 | `vps_workspaces/hapi.py`, `hapi_bridge.py` | HAPI binding and official CLI attachment |
 | `vps_workspaces/server.py`, `sharing.py`, `caddy_routes.py` | Link authentication and Caddy configuration |

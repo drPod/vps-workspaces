@@ -28,7 +28,8 @@ def config() -> HapiConfig:
 
 
 class Hapi:
-    def __init__(self) -> None:
+    def __init__(self, timeout: float = 90) -> None:
+        self.timeout = timeout
         self.config = config()
         self.base = self.config.get("api_url") or f"http://127.0.0.1:{self.config['port']}"
         self.token = None
@@ -45,7 +46,7 @@ class Hapi:
             method=method,
         )
         try:
-            with urlopen(request, timeout=90) as response:
+            with urlopen(request, timeout=self.timeout) as response:
                 return json.load(response)
         except HTTPError as error:
             detail = error.read().decode()[:500]

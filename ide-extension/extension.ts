@@ -122,24 +122,13 @@ export async function activate(context: vscode.ExtensionContext) {
           await createTerminals([
             {
               name: title,
-              shellPath: surface.hapi_session
-                ? "/usr/bin/python3"
-                : "/usr/bin/tmux",
-              shellArgs: surface.hapi_session
-                ? [
-                    path.join(root, "app/remote.py"),
-                    "attach",
-                    doc.id,
-                    surface.id,
-                  ]
-                : [
-                    "-L",
-                    "vps-workspaces",
-                    "-u",
-                    "attach-session",
-                    "-t",
-                    "=" + surface.session,
-                  ],
+              shellPath: "/usr/bin/python3",
+              shellArgs: [
+                path.join(root, "app/remote.py"),
+                "attach",
+                doc.id,
+                surface.id,
+              ],
               location: { viewColumn: column, preserveFocus: true },
               isTransient: true,
             },

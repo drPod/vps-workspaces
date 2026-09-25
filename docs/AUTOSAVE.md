@@ -1,27 +1,46 @@
-# Native workspace autosave
+# Automatic persistence
 
-Source `shell-integration.zsh` from the Mac's `~/.zshrc`. The installed setup does this automatically for new local cmux shells. For an already-open shell, source it once:
+With the base cmux/VPS installation complete, run `python3 workspace.py persistence install`
+on both machines. The Mac must allow cmux **Automation** socket access: launchd cannot use
+“processes started inside cmux only.” The installer does not weaken or change that setting.
+
+On the Mac, the installer enables a launchd autosave worker and sources the zsh integration.
+A normal new local cmux workspace becomes a native SSH workspace on the configured VPS at
+its first shell prompt. New remote bash terminals attach to individual upstream tmux sessions
+before accepting input. Existing HAPI agents are discovered and registered without spawning
+another engine. Set `VWS_LOCAL=1` for a shell that should deliberately stay local.
+
+Native cmux owns SSH reconnect and app-session restoration. The VPS owns tmux shells, HAPI
+conversations and revisioned workspace definitions. Closing a viewer or sleeping the Mac leaves
+VPS processes running. Closing a workspace keeps its saved definition; `workspace.py open NAME`
+reopens it, including browser tabs. cmux's normal app relaunch restores its open SSH workspaces.
+After a VPS reboot, shells can be recreated and HAPI can resume conversations; arbitrary process
+memory is not checkpointed.
+
+The worker saves splits, proportions, tab order, selected tabs, URLs, workspace names and
+terminal identities after two seconds of stability. Removing terminal tabs settles for ten
+seconds before saving; the previous definition is kept in `autosave-drafts/*-before-removal.json`.
+Closing a tab removes its view, not its VPS session. This avoids notifications for intentional
+layout edits while preserving recovery data. Incomplete snapshots and unknown running processes
+are never replaced with invented empty shells.
+
+Connection failures retry automatically, with a notification after a minute of continuous
+failure. Two viewers making conflicting layout changes still pause rather than overwrite each
+other. Autosave status distinguishes a retry from a conflict:
 
 ```sh
-source ~/Coding/vps-workspaces/shell-integration.zsh
+python3 workspace.py autosave-status
+python3 workspace.py open NAME
+python3 workspace.py save NAME
+python3 workspace.py keep-local NAME
 ```
 
-The watcher polls cmux once per second and saves after a layout change has settled for two seconds. It records splits/proportions, tabs/selection, browser URLs, workspace names, managed terminal identities and HAPI bindings. It ignores changing terminal/page titles and tiny split-ratio noise. It does not save browser cookies/forms/scroll positions, unsaved editor buffers or running process memory.
+Use `keep-local` only after reviewing a conflict. It fetches the latest revision and still uses
+the server's optimistic revision check. Each native viewer has a separate tracked revision.
 
-It runs as a descendant of the local cmux shell to respect cmux's control-access setting. If that shell closes, a later local cmux prompt starts a replacement. While no authorized watcher is running, changes are not automatically saved. The next watcher compares the current layout with the saved definition. This is native cmux autosave; code-server layout changes are not exported back.
+Browser cookies, forms, localStorage, scroll positions and unsaved editor buffers are not part
+of the portable layout. Native cmux may retain its own browser state locally. Save project files
+normally; Git commits are separate. Codex/HAPI save conversations independently. code-server
+opens the saved native layout; its subsequent rearrangements remain local to that browser viewer.
 
-Every opened native copy has its own tracked revision. Merely opening two copies is safe. If both edit, the first save wins and the other pauses rather than overwriting the newer version. A Mac notification and `autosave-status` show the conflict; a local draft preserves the observed layout under `~/.local/state/vps-workspaces/autosave-drafts/`.
-
-```sh
-python3 ~/Coding/vps-workspaces/workspace.py autosave-status
-# Keep the VPS version by reopening it:
-python3 ~/Coding/vps-workspaces/workspace.py open outreach
-# Explicitly replace the VPS layout with the currently tracked local copy:
-python3 ~/Coding/vps-workspaces/workspace.py keep-local outreach
-# Manual save remains available:
-python3 ~/Coding/vps-workspaces/workspace.py save outreach
-```
-
-`keep-local` is an explicit conflict resolution: it fetches the latest revision and still uses the server's revision check, so a further simultaneous save is rejected. For the same workspace open multiple times, the manual command targets the most recently opened tracked copy. Close an obsolete copy when choosing a winner.
-
-Unmanaged terminal panes pause saving because they have no persistent VPS identity. Use `workspace.py add-terminal` for those. New browser panes can be saved directly. Conversation history is saved by Codex/HAPI independently of layout autosave. Save files normally in your editor; Git commits remain a separate action.
+Runtime maps, recovery drafts and links live outside Git. See [maintenance](MAINTENANCE.md).

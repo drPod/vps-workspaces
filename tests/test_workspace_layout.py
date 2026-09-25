@@ -26,9 +26,9 @@ class LayoutTests(unittest.TestCase):
             ],
         }
         agent = {"id": "agent-s", "type": "terminal", "session": "demo-agent-s", "hapi_session": "existing"}
-        with patch("vps_workspaces.workspace.remote", return_value={"s": agent}) as remote:
+        with patch("vps_workspaces.persistence.discover", return_value={"s": agent}) as remote:
             doc = snapshot_workspace("demo", state, tree)
-        remote.assert_called_once_with("surface-agents", "demo", "native")
+        remote.assert_called_once_with("demo", tree)
         self.assertEqual(doc["layout"]["pane"]["surfaces"][0]["hapi_session"], "existing")
         self.assertEqual(state["bindings"]["s"], "agent-s")
         self.assertEqual(state["pending_surfaces"]["agent-s"], agent)
@@ -43,7 +43,7 @@ class LayoutTests(unittest.TestCase):
             "layout": {"pane": {"id": "p"}},
         }
         with (
-            patch("vps_workspaces.workspace.remote", return_value={}),
+            patch("vps_workspaces.persistence.discover", return_value={}),
             self.assertRaisesRegex(ValueError, "Unmanaged terminal"),
         ):
             snapshot_workspace("demo", state, tree)
@@ -73,3 +73,31 @@ class LayoutTests(unittest.TestCase):
         pane = result["layout"]["pane"]
         self.assertEqual(pane["selected"], 1)
         self.assertEqual([s["title"] for s in pane["surfaces"]], ["Report", "Studio"])
+
+    def test_unloaded_browser_keeps_saved_url_and_new_tab_is_blank(self):
+        state = {
+            "doc": {
+                "id": "demo",
+                "layout": {"pane": {"surfaces": [{"id": "saved", "type": "browser", "url": "https://example.com"}]}},
+            },
+            "bindings": {"old": "saved"},
+            "revision": 1,
+        }
+        tree = {
+            "title": "Demo",
+            "layout": {"pane": {"id": "p"}},
+            "panes": [
+                {
+                    "id": "p",
+                    "selected_surface_id": "new",
+                    "surfaces": [
+                        {"id": "old", "type": "browser", "title": "Page", "url": None},
+                        {"id": "new", "type": "browser", "title": "New tab", "url": None},
+                    ],
+                }
+            ],
+        }
+        result = snapshot_workspace("demo", state, tree)
+        self.assertEqual(
+            [s["url"] for s in result["layout"]["pane"]["surfaces"]], ["https://example.com", "about:blank"]
+        )

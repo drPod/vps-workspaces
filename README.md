@@ -45,8 +45,10 @@ python3 workspace.py link my-project --copy
 python3 workspace.py autosave-status
 ```
 
-The default SSH alias is `myvps`; override it with `VWS_SSH_HOST`. Ordinary local cmux workspaces
-remain local. Manual `save` and conflict recovery commands remain available.
+The default SSH alias is `myvps`; override it with `VWS_SSH_HOST`. For automatic persistence,
+run `python3 workspace.py persistence install` on both machines after base setup. Normal new
+cmux workspaces then become VPS workspaces, and terminal tabs use persistent tmux sessions.
+See [automatic persistence](docs/AUTOSAVE.md) for permissions, recovery and the local opt-out.
 
 ## How the pieces fit
 

@@ -37,3 +37,11 @@ Workspace Layout was not installed unchanged: its source disposes all existing t
 - [HAPI](https://github.com/tiann/hapi), official npm package `@twsxtd/hapi@0.30.7`, AGPL-3.0-only: deployed as the complete separate application. Workspace code calls its CLI/API; its implementation is not copied into this MIT repository. See [HAPI](HAPI.md) and [source research](SHARED-AGENT-RESEARCH.md).
 - [rsnapshot](https://github.com/rsnapshot/rsnapshot), GPL: installed as a separate standard backup tool. It owns rsync snapshot creation, hard-link reuse and retention. Our scripts supply deployment configuration and SQLite online-backup preparation.
 - systemd's `systemd-socket-proxyd` bridges the existing Caddy Unix-socket mount to HAPI's loopback listener. No custom HAPI HTTP/WebSocket proxy was written.
+
+## Automatic persistence
+
+New shells use upstream tmux sessions and native shell startup hooks. Native cmux owns its
+SSH PTYs, reconnect and app restoration; `ssh-session-list` maps reattached native surfaces
+back to their original session identities. Launchd supervises the Mac watcher. Workspace
+registration and portable layout translation remain this project's integration code.
+References: https://cmux.com/docs/ssh and https://cmux.com/docs/session-restore.

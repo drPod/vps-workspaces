@@ -87,7 +87,7 @@ class AutosaveTests(unittest.TestCase):
             self.assertEqual(sum(s["state"] == "paused" for s in status["instances"].values()), 1)
             self.assertEqual(len(list((Path(tmp) / "autosave-drafts").glob("*.json"))), 1)
 
-    def test_detached_terminal_does_not_erase_saved_agent(self):
+    def test_closed_terminal_saves_after_grace_with_recovery_copy(self):
         with tempfile.TemporaryDirectory() as tmp, patch.object(workspace, "STATE", Path(tmp)):
             workspace.store(
                 "demo",
@@ -109,9 +109,13 @@ class AutosaveTests(unittest.TestCase):
                 autosave.tick(debounce, errors, 0)
                 autosave.tick(debounce, errors, 3)
                 remote.assert_not_called()
-                notify.assert_called_once()
-            self.assertIn("preserved", errors["one"][1])
-            self.assertTrue((Path(tmp) / "autosave-drafts/one.json").exists())
+                notify.assert_not_called()
+                remote.return_value = {"revision": 2, "layout": {"pane": {"surfaces": []}}}
+                autosave.tick(debounce, errors, 11)
+                remote.assert_called_once()
+                notify.assert_not_called()
+            recovery = Path(tmp) / "autosave-drafts/one-before-removal.json"
+            self.assertEqual(json.loads(recovery.read_text())["doc"]["layout"]["pane"]["surfaces"][0]["id"], "agent")
 
     def test_transient_helper_does_not_notify_but_persistent_shell_does(self):
         with tempfile.TemporaryDirectory() as tmp, patch.object(workspace, "STATE", Path(tmp)):

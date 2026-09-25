@@ -36,6 +36,14 @@ def save(doc: Workspace) -> Workspace:
     old = load(name) if path.exists() else None
     if old and doc.get("revision") != old["revision"]:
         raise ValueError("Workspace changed on another Mac. Open the latest saved workspace before saving.")
+    for surface in surfaces(doc["layout"]):
+        if surface["type"] == "terminal" and surface["id"].startswith("shell-"):
+            record = ROOT / "shells" / (surface["id"][6:].upper() + ".json")
+            if record.exists():
+                native = json.loads(record.read_text())
+                route = ROOT / (surface["session"] + ".route")
+                data = json.loads(route.read_text()) if route.exists() else {}
+                atomic(route, {**data, "workspace_name": name, "CMUX_WORKSPACE_ID": native["workspace"]})
     doc["host"] = old["host"] if old else name + "." + json.loads((ROOT / "settings.json").read_text())["base_domain"]
     doc["revision"] = (old.get("revision", 0) if old else 0) + 1
     doc["saved_at"] = int(time.time())
@@ -166,7 +174,17 @@ def surface_agents(name: str, workspace_id: str) -> dict[str, Surface]:
     from vps_workspaces.hapi_bridge import Hapi
 
     checked_id(name)
-    sessions = {s["id"]: s for s in Hapi().request("/api/sessions")["sessions"] if s.get("active")}
+    shells: dict[str, Surface] = {}
+    for path in (ROOT / "shells").glob("*.json"):
+        record = json.loads(path.read_text())
+        if record["workspace"] == workspace_id:
+            shells[path.stem] = record["surface"]
+    try:
+        sessions = {s["id"]: s for s in Hapi(timeout=5).request("/api/sessions")["sessions"] if s.get("active")}
+    except (OSError, RuntimeError):
+        if shells:
+            return shells
+        raise
     urls = {
         s["metadata"]["hapiMcpUrl"]: sid for sid, s in sessions.items() if (s.get("metadata") or {}).get("hapiMcpUrl")
     }
@@ -198,7 +216,7 @@ def surface_agents(name: str, workspace_id: str) -> dict[str, Surface]:
                 process = pathlib.Path("/proc") / parent
         except (OSError, ValueError, IndexError, UnicodeError):
             continue
-    result: dict[str, Surface] = {}
+    result: dict[str, Surface] = shells
     for native_id, candidates in matches.items():
         if len(candidates) != 1:
             continue
@@ -311,6 +329,9 @@ def attach(name: str, surface: str) -> NoReturn:
         from vps_workspaces.hapi_bridge import attach as hapi_attach
 
         hapi_attach(s["hapi_session"])
+    if os.environ.get("TMUX") and os.environ.get("VWS_SESSION"):
+        run([*TMUX, "switch-client", "-t", "=" + session])
+        sys.exit(0)
     os.execv(TMUX[0], [*TMUX, "attach-session", "-t", "=" + session])
 
 
@@ -339,6 +360,16 @@ def main() -> None:
             with open(ROOT / "registry.lock", "w") as lock:
                 fcntl.flock(lock, fcntl.LOCK_EX)
                 print(json.dumps(prepare_terminal(sys.argv[2], sys.argv[3], sys.argv[4])))
+        elif action == "import":
+            from vps_workspaces.ide import ensure_ide
+
+            with open(ROOT / "registry.lock", "w") as lock:
+                fcntl.flock(lock, fcntl.LOCK_EX)
+                doc = validate(json.load(sys.stdin))
+                if (ROOT / (doc["id"] + ".json")).exists():
+                    raise ValueError("Workspace already registered")
+                ensure_ide(ROOT, doc)
+                print(json.dumps(save(doc)))
         elif action == "save":
             with open(ROOT / "registry.lock", "w") as lock:
                 fcntl.flock(lock, fcntl.LOCK_EX)

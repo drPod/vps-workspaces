@@ -70,7 +70,7 @@ URLs automatically after a short debounce. Manual save is also available:
 python3 workspace.py save demo
 ```
 
-Add terminal panes through `add-terminal` so they get persistent session identities. Save rejects unmanaged terminals rather than quietly publishing a different process. Browser panes can be added using ordinary cmux controls.
+Run `python3 workspace.py persistence install` on the VPS and Mac to make ordinary new workspaces and bash terminal tabs persistent automatically. The Mac requires cmux Automation socket access. `add-terminal` remains available for explicitly named terminals. Browser panes use ordinary cmux controls.
 
 ## Share
 
@@ -91,7 +91,7 @@ keep the VPS installed application separate so changes are reviewed before becom
 Exclude `.git`, `.venv`, `node_modules`, caches and private artifacts from deployments.
 The committed extension bundle does not require Node dependencies on the deployed runtime.
 
-Source `shell-integration.zsh` from your Mac's `~/.zshrc` to start native autosave in local
-cmux shells. See [autosave](AUTOSAVE.md) and [maintenance](MAINTENANCE.md) for verification.
+The persistence installer sources the shell integrations and installs the Mac launchd worker.
+See [autosave](AUTOSAVE.md) and [maintenance](MAINTENANCE.md) for behavior and verification.
 Optional VPS-to-Mac administration uses `workspace.py install mac-access` on the Mac;
 it is not required to open a workspace or copy its link.

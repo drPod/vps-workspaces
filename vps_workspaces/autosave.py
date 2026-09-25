@@ -73,6 +73,15 @@ def tick(debounce: Debounce, errors: dict[str, tuple[int, str, bool]], now: floa
                     ws.atomic_state(ip, dict(state, registry_name=p.stem))
         all_trees = ws.cmux("tree", "--all")
         trees = {w["id"]: w for window in all_trees["windows"] for w in window["workspaces"]}
+        if (ws.STATE / "persistence.json").exists():
+            from vps_workspaces.persistence import adopt
+
+            for wid, current in trees.items():
+                if not (directory / (wid + ".json")).exists():
+                    try:
+                        adopt(current)
+                    except (ValueError, RuntimeError, OSError) as error:
+                        print(f"Workspace registration: {error}", flush=True)
         status = {}
         for p in directory.glob("*.json"):
             state = json.loads(p.read_text())
@@ -85,17 +94,20 @@ def tick(debounce: Debounce, errors: dict[str, tuple[int, str, bool]], now: floa
                 doc = ws.snapshot_workspace(name, candidate, trees[wid])
                 saved_agents = {s["id"] for s in surfaces(state["doc"]["layout"]) if s["type"] == "terminal"}
                 visible = {s["id"] for s in surfaces(doc["layout"])}
-                if saved_agents - visible:
-                    raise ValueError(
-                        "A saved terminal is detached or closed. Its saved binding was preserved; "
-                        "reconnect it, or use an explicit workspace save to confirm removal."
-                    )
+                removed = bool(saved_agents - visible)
                 value = fingerprint(doc)
                 baseline = fingerprint(state["doc"])
                 if wid in errors and errors[wid][0] == state["revision"] and errors[wid][2]:
                     status[wid].update(state="paused", error=errors[wid][1])
                     continue
-                if debounce.ready(wid, baseline, value, now):
+                ready = debounce.ready(wid, baseline, value, now)
+                if removed and wid in debounce.pending:
+                    ready = ready and now - debounce.pending[wid][1] >= 10
+                if ready:
+                    if removed:
+                        drafts = ws.STATE / "autosave-drafts"
+                        drafts.mkdir(exist_ok=True)
+                        ws.atomic_state(drafts / (wid + "-before-removal.json"), state)
                     ws.save_state(name, candidate, trees[wid])
                     debounce.pending.pop(wid, None)
                     errors.pop(wid, None)
@@ -136,7 +148,6 @@ def main() -> None:
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
             return
-        ws.cmux("ping")
         debounce = Debounce()
         errors: dict[str, tuple[int, str, bool]] = {}
         status_path = ws.STATE / "autosave-status.json"
@@ -147,11 +158,15 @@ def main() -> None:
                 for wid, s in previous.items()
                 if s.get("state") in ("paused", "retrying") and s.get("error")
             }
+        last_error = ""
         while True:
             try:
                 tick(debounce, errors, time.monotonic())
+                last_error = ""
             except (ValueError, RuntimeError, OSError, KeyError, TypeError, subprocess.SubprocessError) as error:
-                print(str(error), flush=True)
+                if str(error) != last_error:
+                    print(str(error), flush=True)
+                    last_error = str(error)
                 if "Access denied" in str(error):
                     return
             time.sleep(1)
